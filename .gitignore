@@ -1,0 +1,47 @@
+# Target directory (Maven builds)
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Environment & Secrets (Tokens, passwords, keys)
+.env
+.env.*
+!*.env.example
+*.key
+*.pem
+*.jks
+*.p12
+*.pub
+*credential*
+*token*
+secrets.properties
+application-local.properties
+application-local.yml
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
+.settings/
+.nbproject/
+*.env
+
+# Operating System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Log files
+*.log
+logs/
+**/logs/
