@@ -1,221 +1,233 @@
-# Implementation Plan: Enterprise Banking Notification & Event System
+# Implementation Plan: Enterprise Banking Notification & Event System - Phase 2
 
-Welcome to the project! This implementation plan outlines the architecture, database designs, messaging flows, and a phased, step-by-step roadmap to build an Event-Driven Enterprise Banking Platform from scratch. 
-
-Since you are a fresher, each phase is designed as a learning milestone. We will build the system incrementally, explaining the architectural patterns (like Database-per-Service, Event-Driven Architecture, API Gateway, Rate Limiting, and JWT-based Stateless Auth) as we write the code.
+This plan details the design and implementation of **Phase 2: Core Banking Services (User, Account, and Transaction Services)**. We will build the core engine of the banking platform using a Database-per-Service architecture, sync HTTP communication using OpenFeign, and event publishing via Kafka.
 
 ---
 
-## Architecture Overview
+## Architecture Overview (Phase 2 Focus)
 
 ```mermaid
 graph TD
-    Client[React Frontend] -->|HTTP Requests| Gateway[API Gateway - Spring Cloud Gateway]
-    
-    %% Gateway Routing
-    Gateway -->|Auth Routes| AuthSvc[Authentication Service]
-    Gateway -->|User Routes| UserSvc[User Service]
-    Gateway -->|Account Routes| AccSvc[Account Service]
-    Gateway -->|Tx Routes| TxSvc[Transaction Service]
-    Gateway -->|Admin Routes| AdminSvc[Admin Service]
+    Gateway[API Gateway :8080] -->|/api/v1/users/**| UserSvc[User Service :8082]
+    Gateway -->|/api/v1/accounts/**| AccSvc[Account Service :8083]
+    Gateway -->|/api/v1/transactions/**| TxSvc[Transaction Service :8084]
 
-    %% Shared Infra
-    AuthSvc -->|Blacklist / Refresh| Redis[(Redis Caching & Key Value Store)]
-    Gateway -->|Rate Limiting| Redis
-    
-    %% Databases (Database-per-Service)
-    AuthSvc -->|auth_db| DB_Auth[(PostgreSQL)]
+    %% Databases
     UserSvc -->|user_db| DB_User[(PostgreSQL)]
     AccSvc -->|account_db| DB_Acc[(PostgreSQL)]
     TxSvc -->|transaction_db| DB_Tx[(PostgreSQL)]
-    
-    %% Event Streaming (Kafka)
-    TxSvc -->|Publish transaction.completed| Kafka{Apache Kafka Event Bus}
-    UserSvc -->|Publish user.created / user.updated| Kafka
-    
-    %% Consumer Services
-    Kafka -->|Consume transaction.completed| NotifSvc[Notification Service]
-    Kafka -->|Consume transaction.completed| FraudSvc[Fraud Detection Service]
-    Kafka -->|Consume transaction.completed| AuditSvc[Audit Service]
-    Kafka -->|Consume transaction.completed| AnalyticsSvc[Analytics Service]
-    Kafka -->|Consume transaction.completed| StatementSvc[Statement Service]
-    
-    %% Async Consumer Databases
-    NotifSvc -->|notification_db| DB_Notif[(PostgreSQL)]
-    FraudSvc -->|fraud_db| DB_Fraud[(PostgreSQL)]
-    AuditSvc -->|audit_db| DB_Audit[(PostgreSQL)]
-    AnalyticsSvc -->|analytics_db| DB_Analytics[(PostgreSQL)]
-    StatementSvc -->|statement_db| DB_Statement[(PostgreSQL)]
-    
-    %% Notification Output
-    NotifSvc -->|Email| MailHog[MailHog SMTP]
-    NotifSvc -->|SMS| SMSMock[SMS Log Service]
-    NotifSvc -->|Push| InAppPush[In-App Push Registry]
-    
-    %% Fraud Event Loop
-    FraudSvc -->|Publish fraud.detected| Kafka
-    Kafka -->|Consume fraud.detected| NotifSvc
-    Kafka -->|Consume fraud.detected| AccSvc
+
+    %% Balance Caching
+    AccSvc -->|Cache Balance| Redis[(Redis)]
+
+    %% Internal Sync Call
+    TxSvc -->|Feign: /internal/accounts/**| AccSvc
+
+    %% Async Pub
+    TxSvc -->|Kafka: transaction.completed| Kafka{Apache Kafka :29092}
 ```
 
-### Key Architectural Patterns
-1. **Database-per-Service**: Each microservice owns its PostgreSQL database. No microservice can directly access another service's database. This prevents tight coupling and allows independent schema evolution.
-2. **Event-Driven Architecture (EDA)**: The transaction processing is synchronous and fast. Once validated and stored, a `transaction.completed` event is fired to Kafka. Downstream tasks (notifications, fraud analysis, PDF generation, analytics, auditing) consume this event asynchronously, keeping the transaction endpoint highly responsive.
-3. **API Gateway & Centralized JWT Auth**: The API Gateway acts as the single entry point. It validates JWT tokens, handles CORS, and routes traffic. It also uses Redis to perform API Rate Limiting to prevent Denial of Service (DoS) attacks.
-4. **Redis Cache & Blacklist**: Used for blazingly fast lookups, such as keeping a blacklist of logged-out JWTs, caching frequently queried user balances, and keeping rate limit counters.
-
----
-
-## Kafka Event Schema Design
-
-Below are the key events that will be transmitted through our Kafka cluster:
-
-| Topic Name | Producer Service | Consumer Services | Payload Details |
-| :--- | :--- | :--- | :--- |
-| `user.created` | Auth / User Service | Audit Service, Analytics Service | `userId`, `username`, `email`, `role`, `createdAt` |
-| `transaction.completed` | Transaction Service | Notification, Fraud, Audit, Analytics, Statement | `transactionId`, `sourceAccountId`, `targetAccountId`, `amount`, `transactionType`, `channel` (UPI/NEFT/RTGS), `status`, `timestamp` |
-| `fraud.detected` | Fraud Service | Notification Service, Account Service, Audit | `fraudAlertId`, `transactionId`, `accountId`, `riskScore`, `reasons`, `severity` (LOW/MEDIUM/HIGH), `timestamp` |
-| `notification.sent` | Notification Service | Audit Service, Admin Service | `notificationId`, `recipient`, `type` (EMAIL/SMS/PUSH), `status`, `sentAt` |
-| `notification.failed` | Notification Service | Audit Service, Admin Service | `notificationId`, `recipient`, `type`, `errorDetails`, `retryCount` |
+### Key Mechanisms:
+1. **Edge Headers**: The API Gateway validates incoming JWTs and propagates user context downstream via headers: `X-User-Id`, `X-User-Name`, `X-User-Roles`.
+2. **Synchronous Balance Updates**: The Transaction Service communicates with the Account Service synchronously using **Spring Cloud OpenFeign** to check and update account balances atomically.
+3. **Asynchronous Events**: Once a transaction is successfully processed, the Transaction Service publishes a `transaction.completed` event to Apache Kafka for downstream analytics and notification processing.
 
 ---
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **System Memory Requirements**
-> Running 11 Spring Boot services simultaneously can consume between 4GB and 6GB of system RAM. 
-> To make it runnable on standard developer laptops (e.g., 8GB or 16GB RAM):
-> 1. We will configure very tight JVM memory constraints in the Docker Compose setup (e.g., `-XX:MaxRAMPercentage=50.0 -Xmx256m` for each service).
-> 2. We will set up a Parent Maven Project (`pom.xml`) at the repository root to enable building the entire suite with one command: `mvn clean install`.
-> 3. We will group services so you can run only the ones you are working on during development (e.g., Auth + Gateway + Account first, then adding Kafka & Transaction later).
+> **Internal Service Boundaries & Security**
+> Downstream services (`user-service`, `account-service`, `transaction-service`) do not run traditional Spring Security login checks. Instead:
+> 1. They validate authorization by checking the `X-User-Roles` and `X-User-Id` headers injected by the API Gateway.
+> 2. Internal APIs (e.g., account balance check and updates) are mapped under `/internal/accounts/**` on the Account Service. These endpoints are **not** routed by the API Gateway, ensuring external requests cannot access them.
 
 > [!NOTE]
-> **Free Notification Stack Integration**
-> - For **Email**: We will use **MailHog**, which runs locally as an SMTP server and provides a web dashboard at `http://localhost:8025` to inspect sent emails.
-> - For **SMS**: We will create a local log-based provider.
-> - For **Push Notifications**: We will implement an in-app database-backed notification system that the React frontend can poll or retrieve via REST APIs, mimicking real-time deliveries.
+> **Account Number Format**
+> Account numbers will be generated dynamically as 12-digit strings (e.g., `100012345678`), starting with a constant branch code (`1000`) followed by 8 random digits. Uniqueness is enforced at the database level and verified during generation.
 
 ---
 
-## Proposed Changes & Phased Roadmap
+## Open Questions
 
-We will divide development into **6 progressive phases**.
-
-### Phase 1: Infrastructure Setup & Authentication
-We will set up the local Docker environment containing PostgreSQL, Kafka (using KRaft to avoid needing Zookeeper), Redis, and MailHog. Then we will build the Maven parent configuration, the API Gateway, and the Auth Service.
-
-#### [NEW] [docker-compose.infra.yml](file:///e:/Project/TransactSphere/docker/docker-compose.infra.yml)
-Contains Postgres (with setup scripts for all 9 schemas), Redis, Apache Kafka, and MailHog.
-
-#### [NEW] [pom.xml](file:///e:/Project/TransactSphere/pom.xml)
-Parent Maven POM managing dependencies (Spring Boot 3.3.x, Lombok, MapStruct, Spring Security, Spring Cloud Gateway, JWT).
-
-#### [NEW] [gateway/](file:///e:/Project/TransactSphere/gateway)
-- Spring Cloud Gateway configuration.
-- Redis-backed rate limiter.
-- JWT verification filter.
-
-#### [NEW] [auth-service/](file:///e:/Project/TransactSphere/auth-service)
-- PostgreSQL storage for users and credentials.
-- Security configurations (BCrypt, Spring Security 6).
-- JWT Token Generation & Refresh token logic.
-- Redis integration to blacklist logged-out tokens.
+> [!NOTE]
+> **Transaction Limits and Checks**
+> We propose enforcing the following default limits directly inside the Transaction Service during Phase 2:
+> - Maximum transfer amount per transaction: ₹2,00,000.
+> - Minimum transaction amount: ₹1.00.
+> - Accounts must not be frozen to perform any transaction.
+> *Please confirm if we should make these limits configurable via properties.*
 
 ---
 
-### Phase 2: Core Banking Services (User, Account, Transaction)
-We will build the primary transactional engine of the bank.
+## Proposed Changes
 
-#### [NEW] [user-service/](file:///e:/Project/TransactSphere/user-service)
-- User Profiles, Address details, phone, email, and KYC status.
+### [Component] Parent Module Configuration
 
-#### [NEW] [account-service/](file:///e:/Project/TransactSphere/account-service)
-- Savings and Current Accounts.
-- In-memory/Redis caching of balances.
-- Balance inquiry, mini statements, and account freeze/unfreeze APIs.
-
-#### [NEW] [transaction-service/](file:///e:/Project/TransactSphere/transaction-service)
-- Transfer logic (NEFT, RTGS, UPI, Internal Transfer, Deposit, Withdrawal).
-- Validations (Balance checks, transfer limits, beneficiary limits).
-- Transaction records storage.
-- Kafka Producer to publish transactions to `transaction.completed`.
+#### [MODIFY] [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/pom.xml)
+- Add new submodules under `<modules>` block:
+  ```xml
+  <module>user-service</module>
+  <module>account-service</module>
+  <module>transaction-service</module>
+  ```
 
 ---
 
-### Phase 3: Consumer Services - Notification & Fraud Detection
-We will connect Kafka and build the asynchronous processing consumers.
+### [Component] User Service (`user-service`)
+Responsible for managing user KYC documents, profile information, addresses, and status flags.
 
-#### [NEW] [notification-service/](file:///e:/Project/TransactSphere/notification-service)
-- Kafka Consumer for `transaction.completed` and `fraud.detected`.
-- Template Engine (using Thymeleaf or simple String interpolation) for emails and SMS.
-- SMTP Client pointing to MailHog.
-- SMS and Push logs.
-- Retry mechanisms with Backoff and DLQ (Dead Letter Queue) support.
+#### [NEW] [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/pom.xml)
+- Declares dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `postgresql` (runtime), `lombok`, MapStruct, and `spring-boot-starter-test`.
 
-#### [NEW] [fraud-service/](file:///e:/Project/TransactSphere/fraud-service)
-- Real-time rule evaluation (Amount > ₹2,00,000, rapid multiple transfers, location anomalies).
-- Publishes `fraud.detected` to alert users and notify Account Service to temporarily lock accounts if score is high.
+#### [NEW] [application.yml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/src/main/resources/application.yml)
+- Sets port to `8082`.
+- Configures datasource connection to `jdbc:postgresql://${DB_HOST:localhost}:5432/user_db`.
+- Sets Hibernate DDL-auto to `update`.
 
----
+#### [NEW] `com.transactsphere.user.UserApplication.java`
+- Main class annotated with `@SpringBootApplication`.
 
-### Phase 4: Operations & Analytics (Audit, Statement, Analytics, Admin)
-We will build the back-office and auditing components of the platform.
+#### [NEW] `com.transactsphere.user.model.KycStatus.java`
+- Enum containing: `PENDING`, `APPROVED`, `REJECTED`.
 
-#### [NEW] [audit-service/](file:///e:/Project/TransactSphere/audit-service)
-- Consumes all topics.
-- Logs a complete audit trail (IP, service, action, browser) into an immutable table.
+#### [NEW] `com.transactsphere.user.model.UserProfile.java`
+- JPA entity representing user profile fields: `id` (manually set from gateway `X-User-Id`), `firstName`, `lastName`, `phoneNumber`, `email`, `address`, `kycStatus`, `createdAt`, `updatedAt`.
 
-#### [NEW] [statement-service/](file:///e:/Project/TransactSphere/statement-service)
-- Accumulates transactions.
-- Provides PDF generation utility to download official account statements.
+#### [NEW] `com.transactsphere.user.repository.UserProfileRepository.java`
+- JpaRepository interface for database operations.
 
-#### [NEW] [analytics-service/](file:///e:/Project/TransactSphere/analytics-service)
-- Tracks transaction velocities, hourly spikes, total volumes, and revenue metrics.
-- Caches aggregate analytics in Redis for fast rendering on dashboards.
+#### [NEW] `com.transactsphere.user.dto.UserProfileResponse.java` / `UserProfileUpdateRequest.java`
+- Data transfer objects for profile retrieval and update operations.
 
-#### [NEW] [admin-service/](file:///e:/Project/TransactSphere/admin-service)
-- Provides health indicators for Kafka, Redis, and overall cluster.
-- Exposes administrative controls for system overrides.
+#### [NEW] `com.transactsphere.user.service.UserProfileService.java`
+- Contains business logic:
+  - Retrieval of profile. If profile is missing (e.g., first access after registration), auto-creates a skeleton profile using the `userId`, `username`, and `email` resolved from the gateway headers.
+  - Updates profile address, name, and phone.
+  - Updates KYC status (restricted to admin/employee).
 
----
-
-### Phase 5: React Frontend Application
-A premium dashboard utilizing custom React + Vite + Tailwind CSS.
-
-#### [NEW] [frontend/](file:///e:/Project/TransactSphere/frontend)
-- **Aesthetic UI**: Sleek dark mode, custom glassmorphism components, and dynamic transition states.
-- **Features**:
-  - Register & Login (JWT Authentication with token refresh interceptors).
-  - Customer Portal: View balances, transfer funds (UPI/NEFT/RTGS), transaction lists, push alerts.
-  - Admin/Employee Portal: Audit trail tables, Fraud warnings, system analytics graphs, account management controls.
+#### [NEW] `com.transactsphere.user.controller.UserProfileController.java`
+- REST Controller exposing:
+  - `GET /api/v1/users/profile` (Gets profile of current user using `X-User-Id` header).
+  - `PUT /api/v1/users/profile` (Updates profile of current user).
+  - `GET /api/v1/users` (ADMIN/EMPLOYEE only - lists all profiles).
+  - `GET /api/v1/users/{id}` (ADMIN/EMPLOYEE only - gets profile by ID).
+  - `PUT /api/v1/users/{id}/kyc` (ADMIN/EMPLOYEE only - updates KYC status).
 
 ---
 
-### Phase 6: DevOps, Testing & Documentation
-We will stitch the microservices together using Docker Compose, add Prometheus/Grafana monitors, write automated tests, and compile API documentation.
+### [Component] Account Service (`account-service`)
+Manages banking accounts, balance changes, and caching.
 
-#### [NEW] [docker/docker-compose.yml](file:///e:/Project/TransactSphere/docker/docker-compose.yml)
-Super docker-compose that starts all 11 Spring Boot services, the React frontend, and the infrastructure in a single orchestrated command.
+#### [NEW] [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/pom.xml)
+- Declares dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-data-redis` (for caching), `postgresql` (runtime), `lombok`, and testing tools.
 
-#### [NEW] [docker/prometheus.yml](file:///e:/Project/TransactSphere/docker/prometheus.yml) & [docker/grafana/](file:///e:/Project/TransactSphere/docker/grafana)
-Pre-configured dashboard to display JVM memory usage, Kafka throughput, and transaction metrics.
+#### [NEW] [application.yml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/resources/application.yml)
+- Sets port to `8083`.
+- Configures datasource connection to `jdbc:postgresql://${DB_HOST:localhost}:5432/account_db`.
+- Configures Redis connection details.
+
+#### [NEW] `com.transactsphere.account.AccountApplication.java`
+- Main class annotated with `@SpringBootApplication` and `@EnableCaching`.
+
+#### [NEW] `com.transactsphere.account.model.AccountType.java`
+- Enum containing `SAVINGS` and `CURRENT`.
+
+#### [NEW] `com.transactsphere.account.model.Account.java`
+- JPA entity representing: `id` (bigint), `accountNumber` (unique string, indexed), `userId` (owner), `accountType` (enum), `balance` (BigDecimal), `isFrozen` (boolean), `createdAt`, `updatedAt`.
+
+#### [NEW] `com.transactsphere.account.repository.AccountRepository.java`
+- JpaRepository with custom queries: `findByAccountNumber`, `findByUserId`.
+
+#### [NEW] `com.transactsphere.account.config.RedisConfig.java`
+- Sets up standard RedisTemplate and CacheManager configurations.
+
+#### [NEW] `com.transactsphere.account.service.AccountService.java`
+- Implements core operations:
+  - Account creation (generates a unique 12-digit account number).
+  - Caches balances in Redis. Balance retrieval is cached; balance modifications invalidate or update the cache.
+  - Verification: checking freeze states, validating balance sufficiency.
+  - Internal transfer operations: deducting from source and adding to target inside a single `@Transactional` method.
+
+#### [NEW] `com.transactsphere.account.controller.AccountController.java`
+- External API controller:
+  - `POST /api/v1/accounts` (Creates account for logged-in user).
+  - `GET /api/v1/accounts` (Lists accounts for current logged-in user).
+  - `GET /api/v1/accounts/{accountNumber}` (Get details of account).
+  - `PUT /api/v1/accounts/{accountNumber}/freeze` (ADMIN/EMPLOYEE only - freezes/unfreezes account).
+
+#### [NEW] `com.transactsphere.account.controller.InternalAccountController.java`
+- Internal API controller (mapped to `/internal/accounts/**`):
+  - `GET /internal/accounts/{accountNumber}` (Gets account details).
+  - `PUT /internal/accounts/transfer` (Executes debit/credit transfer).
+  - `GET /internal/accounts/user/{userId}` (Lists all account numbers owned by user).
+
+---
+
+### [Component] Transaction Service (`transaction-service`)
+Processes transfers, deposits, and withdrawals, maintaining transaction history and publishing Kafka events.
+
+#### [NEW] [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/pom.xml)
+- Declares dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-kafka`, `spring-cloud-starter-openfeign` (for calling account-service), `postgresql` (runtime), `lombok`, and testing tools.
+
+#### [NEW] [application.yml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/src/main/resources/application.yml)
+- Sets port to `8084`.
+- Configures datasource connection to `jdbc:postgresql://${DB_HOST:localhost}:5432/transaction_db`.
+- Configures Kafka bootstrap servers to `${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}`.
+
+#### [NEW] `com.transactsphere.transaction.TransactionApplication.java`
+- Main class annotated with `@SpringBootApplication` and `@EnableFeignClients`.
+
+#### [NEW] `com.transactsphere.transaction.model.Transaction.java`
+- Entity fields: `id`, `transactionId` (UUID string), `sourceAccountNumber`, `targetAccountNumber`, `amount`, `transactionType` (`DEPOSIT`, `WITHDRAWAL`, `TRANSFER`), `channel` (`UPI`, `NEFT`, `RTGS`, `INTERNAL`), `status` (`PENDING`, `COMPLETED`, `FAILED`), `description`, `userId`, `timestamp`.
+
+#### [NEW] `com.transactsphere.transaction.client.AccountClient.java`
+- Feign Client targeting the `account-service` internal endpoints (`/internal/accounts/**`).
+
+#### [NEW] `com.transactsphere.transaction.dto.TransactionEvent.java`
+- Payload class sent to Kafka containing details about completed transactions.
+
+#### [NEW] `com.transactsphere.transaction.config.KafkaProducerConfig.java`
+- Configures KafkaTemplate and producer factories with JSON serializer.
+
+#### [NEW] `com.transactsphere.transaction.service.TransactionService.java`
+- Implements:
+  - Validation: Verifies account ownership using Feign client, checks frozen status, and applies limits.
+  - Processing:
+    - Creates a transaction log marked as `PENDING`.
+    - Makes a sync Feign call to update account balance in `account-service`.
+    - Updates transaction log status to `COMPLETED` (or `FAILED` if the call raises an error).
+    - Publishes a `TransactionEvent` to the `transaction.completed` Kafka topic.
+
+#### [NEW] `com.transactsphere.transaction.controller.TransactionController.java`
+- REST Controller exposing:
+  - `POST /api/v1/transactions/transfer` (Initiates a money transfer).
+  - `POST /api/v1/transactions/deposit` (Deposits money into an account).
+  - `POST /api/v1/transactions/withdraw` (Withdraws money from an account).
+  - `GET /api/v1/transactions/my` (Lists all transaction history for the logged-in user).
 
 ---
 
 ## Verification Plan
 
-### Phase 1 Verification
-1. Run `docker compose -f docker/docker-compose.infra.yml up -d` and ensure Kafka, Postgres, Redis, and MailHog are healthy.
-2. Build and boot `gateway` and `auth-service`.
-3. Submit a POST request to `/auth/register` and `/auth/login` to obtain a JWT.
-4. Verify that calling a protected route through Gateway returns `401 Unauthorized` without a token, and `200 OK` with a valid token.
-5. Verify that token logout successfully blacklists the JWT in Redis.
+### Automated Tests
+We will build comprehensive unit test suites using JUnit 5, Mockito, and Spring Boot Test:
+- **User Service**: Test profile creation and KYC checks.
+- **Account Service**: Test account creation, random generation checks, and `@Transactional` transfer mechanics.
+- **Transaction Service**: Test validation logic, Feign exceptions management, and verify Kafka event publication using an embedded or container-backed Kafka test environment.
+- Run all project tests:
+  ```bash
+  mvn clean install
+  ```
 
-We will write unit and integration tests (using Mockito and Spring Boot Test) for each service as we build them.
-
----
-
-## Let's Get Started!
-
-Are you ready to proceed with Phase 1? Once you approve this plan, I will create the root directories, setup the infra Docker files, and construct the parent Maven project. We will then design the Gateway and Auth Service together.
+### Manual Verification
+1. Start the Docker infrastructure:
+   ```bash
+   docker compose -f docker/docker-compose.infra.yml up -d
+   ```
+2. Start the microservices: Gateway, Auth-Service, User-Service, Account-Service, and Transaction-Service.
+3. Authenticate to obtain a valid access token.
+4. Test profile retrieval and update through the Gateway (`http://localhost:8080/api/v1/users/profile`).
+5. Create Savings and Current accounts through the Gateway (`http://localhost:8080/api/v1/accounts`).
+6. Perform Deposits, Withdrawals, and Transfers through the Transaction Service APIs. Verify database records are updated correctly and that cached Redis balances reflect the changes.
+7. Read the Kafka console consumer for `transaction.completed` to verify message payloads are correctly formatted and dispatched.

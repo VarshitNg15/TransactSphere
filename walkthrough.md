@@ -1,139 +1,173 @@
-# Walkthrough: Phase 1 (Infrastructure & Authentication)
+# Walkthrough: Phase 2 (Core Banking Services)
 
-We have completed the implementation of **Phase 1** of the Enterprise Banking platform. Below is a detailed summary of the architectural components built and instructions on how to run and test them.
+We have successfully completed the implementation of **Phase 2** of the Enterprise Banking platform. Below is a detailed walkthrough of the architectural components built, code organization, and instructions on how to test them.
 
 ---
 
-## 1. Accomplished Tasks
+## 1. Accomplished Tasks & Architecture
 
-### Infrastructure Setup
-- Created `docker/postgres/init-db.sql`: Automatically spins up all 9 separate database schemas for the microservices to enforce the **Database-per-Service** isolation pattern.
-- Created `docker/docker-compose.infra.yml`: Orchestrates:
-  - **PostgreSQL**: Standard relational store for business transaction logs.
-  - **Redis**: Fast, key-value memory store for JWT blacklists, caching, and API Gateway rate-limit counts.
-  - **Apache Kafka (KRaft mode)**: Standard event streaming bus (dual listener setup allows container-to-container routing inside Docker and local debugging from the host machine on port `29092`).
-  - **MailHog**: Mock SMTP server with a web UI on port `8025` to inspect outbound emails without third-party email providers.
+We built three new microservices at the root of the project and modified the parent configurations:
 
-### API Gateway (`gateway`)
-- Exposes port `8080`.
-- Configured dynamic routing mapping requests (e.g. `/api/v1/auth/**` -> `auth-service`).
-- Implemented **JWT Edge Validation** (`JwtAuthenticationFilter.java`): Intercepts requests, validates signatures, parses user metadata (ID, name, roles), and injects them as headers (`X-User-Id`, `X-User-Name`, `X-User-Roles`) to secure internal backend communications.
-- Configured **Redis Token Bucket Rate Limiting** (`RateLimiterConfig.java`): Limits api calls dynamically per IP address.
+### Submodule Registration & Fixes
+- Registered the new modules in the parent [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/pom.xml) and configured the compile target to Java 21.
+- Fixed compiling issues in `auth-service` by introducing the missing [InvalidTokenException.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/exception/InvalidTokenException.java) and [TokenRefreshRequest.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/dto/TokenRefreshRequest.java).
 
-### Authentication Service (`auth-service`)
-- Exposes port `8081`.
-- Built JPA persistence mapping: `users` table mapped in `auth_db`.
-- Integrated **Spring Security 6 & BCrypt**: Password hashing and authentication.
-- Implemented **JWT Generation & Refresh**: Creates 1-hour access tokens and 7-day refresh tokens.
-- Implemented **Redis Blacklist Session Invalidation** (`JwtService.java`): Revokes JWT validity on logout.
+### User Service (`user-service`)
+- Manages user profiles (first/last names, phone number, address, and KYC status).
+- Exposes REST endpoints to query and update profiles. Auto-initializes profile details on first retrieval using Edge headers propagated by the Gateway.
+- REST Controller: [UserProfileController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/src/main/java/com/transactsphere/user/controller/UserProfileController.java).
+
+### Account Service (`account-service`)
+- Manages savings and current accounts. Employs balance caching in Redis to offload PostgreSQL query stress.
+- Auto-generates unique 12-digit random account numbers starting with branch code `1000`.
+- Exposes secure internal endpoints on `/internal/accounts/**` to allow atomic transaction balance execution.
+- REST Controllers: [AccountController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/java/com/transactsphere/account/controller/AccountController.java) (Public APIs) and [InternalAccountController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/java/com/transactsphere/account/controller/InternalAccountController.java) (Internal endpoints for inter-service calls).
+
+### Transaction Service (`transaction-service`)
+- Processes deposits, withdrawals, and money transfers between accounts.
+- Integrates **Spring Cloud OpenFeign** to query account details and execute balance updates synchronously inside the Account Service.
+- Integrates **Spring Kafka** to publish a `transaction.completed` event to Apache Kafka for asynchronous downstream processing.
+- REST Controller: [TransactionController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/src/main/java/com/transactsphere/transaction/controller/TransactionController.java).
 
 ---
 
 ## 2. Created Files Map
 
-- **Parent POM**: [pom.xml](file:///e:/Project/TransactSphere/pom.xml)
-- **Infrastructure Compose**: [docker-compose.infra.yml](file:///e:/Project/TransactSphere/docker/docker-compose.infra.yml)
-- **Database Init SQL**: [init-db.sql](file:///e:/Project/TransactSphere/docker/postgres/init-db.sql)
-- **Gateway Module**:
-  - [pom.xml](file:///e:/Project/TransactSphere/gateway/pom.xml)
-  - [application.yml](file:///e:/Project/TransactSphere/gateway/src/main/resources/application.yml)
-  - [GatewayApplication.java](file:///e:/Project/TransactSphere/gateway/src/main/java/com/transactsphere/gateway/GatewayApplication.java)
-  - [RateLimiterConfig.java](file:///e:/Project/TransactSphere/gateway/src/main/java/com/transactsphere/gateway/config/RateLimiterConfig.java)
-  - [JwtAuthenticationFilter.java](file:///e:/Project/TransactSphere/gateway/src/main/java/com/transactsphere/gateway/filter/JwtAuthenticationFilter.java)
-  - [Dockerfile](file:///e:/Project/TransactSphere/gateway/Dockerfile)
-- **Auth Service Module**:
-  - [pom.xml](file:///e:/Project/TransactSphere/auth-service/pom.xml)
-  - [application.yml](file:///e:/Project/TransactSphere/auth-service/src/main/resources/application.yml)
-  - [AuthApplication.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/AuthApplication.java)
-  - [SecurityConfig.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/config/SecurityConfig.java)
-  - [RedisConfig.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/config/RedisConfig.java)
-  - [User.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/model/User.java)
-  - [Role.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/model/Role.java)
-  - [RegisterRequest.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/dto/RegisterRequest.java)
-  - [LoginRequest.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/dto/LoginRequest.java)
-  - [AuthResponse.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/dto/AuthResponse.java)
-  - [TokenRefreshRequest.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/dto/TokenRefreshRequest.java)
-  - [UserRepository.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/repository/UserRepository.java)
-  - [AuthService.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/service/AuthService.java)
-  - [JwtService.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/service/JwtService.java)
-  - [AuthController.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/controller/AuthController.java)
-  - [GlobalExceptionHandler.java](file:///e:/Project/TransactSphere/auth-service/src/main/java/com/transactsphere/auth/exception/GlobalExceptionHandler.java)
-  - [Dockerfile](file:///e:/Project/TransactSphere/auth-service/Dockerfile)
+### User Service Module
+- Config: [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/pom.xml) / [application.yml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/src/main/resources/application.yml)
+- Main class: [UserApplication.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/src/main/java/com/transactsphere/user/UserApplication.java)
+- JPA Model: [UserProfile.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/src/main/java/com/transactsphere/user/model/UserProfile.java)
+- Service layer: [UserProfileService.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/src/main/java/com/transactsphere/user/service/UserProfileService.java)
+- Controller layer: [UserProfileController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/user-service/src/main/java/com/transactsphere/user/controller/UserProfileController.java)
+
+### Account Service Module
+- Config: [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/pom.xml) / [application.yml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/resources/application.yml)
+- Caching: [RedisConfig.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/java/com/transactsphere/account/config/RedisConfig.java)
+- JPA Model: [Account.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/java/com/transactsphere/account/model/Account.java)
+- Service layer: [AccountService.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/java/com/transactsphere/account/service/AccountService.java)
+- Controllers: [AccountController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/java/com/transactsphere/account/controller/AccountController.java) / [InternalAccountController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service/src/main/java/com/transactsphere/account/controller/InternalAccountController.java)
+
+### Transaction Service Module
+- Config: [pom.xml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/pom.xml) / [application.yml](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/src/main/resources/application.yml)
+- Feign Client: [AccountClient.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/src/main/java/com/transactsphere/transaction/client/AccountClient.java)
+- JPA Model: [Transaction.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/src/main/java/com/transactsphere/transaction/model/Transaction.java)
+- Service layer: [TransactionService.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/src/main/java/com/transactsphere/transaction/service/TransactionService.java)
+- Controller: [TransactionController.java](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service/src/main/java/com/transactsphere/transaction/controller/TransactionController.java)
 
 ---
 
-## 3. How to Start and Verify Phase 1 Locally
+## 3. How to Run and Verify Phase 2 Locally
 
-Since the IDE's execution tool has a permission restriction for launching subprocesses on your machine, you can easily run these commands in your standard PowerShell, Cmd, or VS Code terminal:
-
-### Step A: Spin Up the Infrastructure
-Navigate to the root directory and run:
+### Step A: Spin Up Infrastructure
+Start PostgreSQL database tables, Redis, Kafka broker, and MailHog:
 ```bash
 docker compose -f docker/docker-compose.infra.yml up -d
 ```
-Check that the databases, Redis cache, MailHog, and Kafka KRaft cluster are running:
-```bash
-docker ps
-```
 
-### Step B: Build the Services
-In the root directory of the project, compile the Maven projects and run the automated tests:
-```bash
+### Step B: Build the Entire Codebase
+Verify compilation and Maven packaging:
+```powershell
 mvn clean install
 ```
-*(This will compile the parent POM, the `gateway` module, the `auth-service` module, and run the controller and service unit test suites).*
+*(This builds all 5 services: Gateway, Auth, User, Account, and Transaction Services).*
 
-### Step C: Boot the Microservices
-In separate terminal windows (or in the background), start the Gateway and Auth Service:
+### Step C: Start the Services
+Start the following microservices in separate terminals or in the background:
 
-**Start Auth Service (Port 8081)**
+1. **Auth Service (Port 8081)**
+   ```powershell
+   cd auth-service
+   mvn spring-boot:run
+   ```
+2. **Gateway (Port 8080)**
+   ```powershell
+   cd gateway
+   mvn spring-boot:run
+   ```
+3. **User Service (Port 8082)**
+   ```powershell
+   cd user-service
+   mvn spring-boot:run
+   ```
+4. **Account Service (Port 8083)**
+   ```powershell
+   cd account-service
+   mvn spring-boot:run
+   ```
+5. **Transaction Service (Port 8084)**
+   ```powershell
+   cd transaction-service
+   mvn spring-boot:run
+   ```
+
+### Step D: Verification APIs via Gateway (Port 8080)
+
+#### 1. Register and Log In to get an Access Token
 ```bash
-cd auth-service
-mvn spring-boot:run
-```
-
-**Start Gateway Service (Port 8080)**
-```bash
-cd gateway
-mvn spring-boot:run
-```
-
-### Step D: Perform API Verification Tests
-
-#### 1. Register a Customer User
-```bash
+# Register
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "customer_one",
-    "email": "customer_one@bank.com",
-    "password": "securepassword123",
-    "role": "CUSTOMER"
-  }'
-```
-*Expected Output:* `{"message":"User registered successfully"}` with HTTP Status `201 Created`.
+  -d '{"username":"alice_test", "email":"alice@test.com", "password":"password123", "role":"CUSTOMER"}'
 
-#### 2. Log In
-```bash
+# Login
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "username": "customer_one",
-    "password": "securepassword123"
-  }'
+  -d '{"username":"alice_test", "password":"password123"}'
 ```
-*Expected Output:* An `accessToken`, `refreshToken`, and user attributes with HTTP Status `200 OK`.
+*Take note of the `"accessToken"` in the response payload.*
 
-#### 3. Access a Protected Route Without Token
-Let's query a fake route on the user service through the Gateway:
+#### 2. Verify User Profile Auto-Creation
+Query User Service through the gateway. Since the profile does not exist yet, the service auto-creates it dynamically using the Edge headers:
 ```bash
-curl -i -X GET http://localhost:8080/api/v1/users/profile
+curl -X GET http://localhost:8080/api/v1/users/profile \
+  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>"
 ```
-*Expected Output:* HTTP Status `401 Unauthorized` due to gateway JWT filter validation failure.
 
-#### 4. Access a Protected Route With Token
+#### 3. Update User Profile details
 ```bash
-curl -i -X GET http://localhost:8080/api/v1/users/profile \
-  -H "Authorization: Bearer <PASTE_YOUR_ACCESS_TOKEN_HERE>"
+curl -X PUT http://localhost:8080/api/v1/users/profile \
+  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"firstName":"Alice", "lastName":"Smith", "phoneNumber":"+1234567890", "email":"alice@test.com", "address":"123 Bank St, NY"}'
 ```
-*Expected Output:* Since `user-service` is not yet running, you will get a gateway forwarding connection error (e.g. `503 Service Unavailable` or `504 Gateway Timeout`), showing that the gateway passed the security check and successfully attempted to forward the request to the backend microservice!
+
+#### 4. Create Savings Account
+```bash
+curl -X POST http://localhost:8080/api/v1/accounts \
+  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"accountType":"SAVINGS"}'
+```
+*Note down the `"accountNumber"` in the output (e.g. `100018349271`).*
+
+#### 5. Deposit Funds
+Deposit ₹5,000 into the account:
+```bash
+curl -X POST http://localhost:8080/api/v1/transactions/deposit \
+  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"targetAccountNumber":"<PASTE_ACCOUNT_NUMBER>", "amount":5000.00, "description":"Initial Deposit"}'
+```
+
+#### 6. Verify Balance in Account Service (Verify Caching)
+Request the account info. The balance will show ₹5,000, and this request will be cached in Redis for fast access:
+```bash
+curl -X GET http://localhost:8080/api/v1/accounts/<PASTE_ACCOUNT_NUMBER> \
+  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>"
+```
+
+#### 7. Perform Transfer (Verify OpenFeign Integration)
+Create a second account (e.g., account number `100049281729`) and transfer ₹1,500 from the first account to the second account:
+```bash
+curl -X POST http://localhost:8080/api/v1/transactions/transfer \
+  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"sourceAccountNumber":"<PASTE_SOURCE_ACCOUNT_NUMBER>", "targetAccountNumber":"<PASTE_TARGET_ACCOUNT_NUMBER>", "amount":1500.00, "channel":"INTERNAL", "description":"Rent Payment"}'
+```
+
+#### 8. Verify Kafka Event Publication
+Verify that a message is successfully produced to Kafka by opening a consumer stream container-side:
+```bash
+docker exec -it kafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic transaction.completed --from-beginning
+```
+*Expected output: JSON event details displaying source account, target account, ₹1,500 transfer amount, status `COMPLETED`, and timestamps.*
