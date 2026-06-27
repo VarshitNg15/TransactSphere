@@ -1,8 +1,8 @@
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\model\KycStatus.java
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\dto\UserProfileUpdateRequest.java
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\UserApplication.java
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\dto\UserProfileResponse.java
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\model\UserProfile.java
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\repository\UserProfileRepository.java
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\service\UserProfileService.java
-C:\Users\akars\Desktop\Java Stack\TransactSphere\TransactSphere\user-service\src\main\java\com\transactsphere\user\controller\UserProfileController.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\controller\UserProfileController.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\model\KycStatus.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\dto\UserProfileUpdateRequest.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\repository\UserProfileRepository.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\model\UserProfile.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\service\UserProfileService.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\dto\UserProfileResponse.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\UserApplication.java

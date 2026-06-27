@@ -105,64 +105,57 @@ Start the following microservices in separate terminals or in the background:
 #### 1. Register and Log In to get an Access Token
 ```bash
 # Register
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"alice_test", "email":"alice@test.com", "password":"password123", "role":"CUSTOMER"}'
+Invoke-RestMethod -Uri http://localhost:8080/api/v1/auth/register -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"username":"alice_test", "email":"alice@test.com", "password":"password123", "role":"CUSTOMER"}'
 
 # Login
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"alice_test", "password":"password123"}'
+$response = Invoke-RestMethod -Uri http://localhost:8080/api/v1/auth/login -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"username":"alice_test", "password":"password123"}'
+$token = $response.accessToken
+
 ```
 *Take note of the `"accessToken"` in the response payload.*
 
 #### 2. Verify User Profile Auto-Creation
 Query User Service through the gateway. Since the profile does not exist yet, the service auto-creates it dynamically using the Edge headers:
 ```bash
-curl -X GET http://localhost:8080/api/v1/users/profile \
-  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>"
+Invoke-RestMethod -Uri http://localhost:8080/api/v1/users/profile -Method GET -Headers @{"Authorization"="Bearer $token"}
 ```
 
 #### 3. Update User Profile details
 ```bash
-curl -X PUT http://localhost:8080/api/v1/users/profile \
-  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"firstName":"Alice", "lastName":"Smith", "phoneNumber":"+1234567890", "email":"alice@test.com", "address":"123 Bank St, NY"}'
+Invoke-RestMethod -Uri http://localhost:8080/api/v1/users/profile -Method PUT -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} -Body '{"firstName":"Alice", "lastName":"Smith", "phoneNumber":"+1234567890", "email":"alice@test.com", "address":"123 Bank St, NY"}'
+
 ```
 
 #### 4. Create Savings Account
 ```bash
-curl -X POST http://localhost:8080/api/v1/accounts \
-  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"accountType":"SAVINGS"}'
+$acc = Invoke-RestMethod -Uri http://localhost:8080/api/v1/accounts -Method POST -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} -Body '{"accountType":"SAVINGS"}'
+$acn = $acc.accountNumber
 ```
 *Note down the `"accountNumber"` in the output (e.g. `100018349271`).*
 
 #### 5. Deposit Funds
 Deposit ₹5,000 into the account:
 ```bash
-curl -X POST http://localhost:8080/api/v1/transactions/deposit \
-  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"targetAccountNumber":"<PASTE_ACCOUNT_NUMBER>", "amount":5000.00, "description":"Initial Deposit"}'
+$body = '{"targetAccountNumber":"' + $acn + '", "amount":5000.00, "description":"Initial Deposit"}'
+Invoke-RestMethod -Uri http://localhost:8080/api/v1/transactions/deposit -Method POST -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} -Body $body
 ```
 
 #### 6. Verify Balance in Account Service (Verify Caching)
 Request the account info. The balance will show ₹5,000, and this request will be cached in Redis for fast access:
 ```bash
-curl -X GET http://localhost:8080/api/v1/accounts/<PASTE_ACCOUNT_NUMBER> \
-  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>"
+Invoke-RestMethod -Uri "http://localhost:8080/api/v1/accounts/$acn" `
+  -Method Get `
+  -Headers @{"Authorization"="Bearer $token"}
 ```
 
 #### 7. Perform Transfer (Verify OpenFeign Integration)
 Create a second account (e.g., account number `100049281729`) and transfer ₹1,500 from the first account to the second account:
 ```bash
-curl -X POST http://localhost:8080/api/v1/transactions/transfer \
-  -H "Authorization: Bearer <PASTE_ACCESS_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"sourceAccountNumber":"<PASTE_SOURCE_ACCOUNT_NUMBER>", "targetAccountNumber":"<PASTE_TARGET_ACCOUNT_NUMBER>", "amount":1500.00, "channel":"INTERNAL", "description":"Rent Payment"}'
+$body = '{"sourceAccountNumber":"' + $acn + '", "targetAccountNumber":"' + $acn2 + '", "amount":1500.00, "channel":"INTERNAL", "description":"Rent Payment"}'
+Invoke-RestMethod -Uri "http://localhost:8080/api/v1/transactions/transfer" `
+  -Method Post `
+  -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} `
+  -Body $body
 ```
 
 #### 8. Verify Kafka Event Publication
