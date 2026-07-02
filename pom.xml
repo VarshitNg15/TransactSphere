@@ -34,6 +34,7 @@
         <module>user-service</module>
         <module>account-service</module>
         <module>transaction-service</module>
+        <module>notification-service</module>
     </modules>
 
     <dependencyManagement>
