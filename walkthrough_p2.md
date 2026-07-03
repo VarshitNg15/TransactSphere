@@ -122,7 +122,7 @@ Invoke-RestMethod -Uri http://localhost:8080/api/v1/users/profile -Method GET -H
 
 #### 3. Update User Profile details
 ```bash
-Invoke-RestMethod -Uri http://localhost:8080/api/v1/users/profile -Method PUT -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} -Body '{"firstName":"Alice", "lastName":"Smith", "phoneNumber":"+1234567890", "email":"alice@test.com", "address":"123 Bank St, NY"}'
+Invoke-RestMethod -Uri http://localhost:8080/api/v1/users/profile -Method PUT -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} -Body '{"firstName":"Akarsh", "lastName":"Papu", "phoneNumber":"+1234567890", "email":"akarsh.demo@gmail.com", "address":"123 Bank St, NY"}'
 
 ```
 
