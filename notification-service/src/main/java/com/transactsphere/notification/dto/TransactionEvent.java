@@ -18,4 +18,5 @@ public class TransactionEvent {
     private String channel;
     private String status;
     private LocalDateTime timestamp;
+    private String fraudReason;
 }

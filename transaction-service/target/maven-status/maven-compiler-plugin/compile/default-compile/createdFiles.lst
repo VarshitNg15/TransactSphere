@@ -1,3 +1,4 @@
+com\transactsphere\transaction\client\UserClient.class
 com\transactsphere\transaction\dto\TransferRequest.class
 com\transactsphere\transaction\dto\AccountDto.class
 com\transactsphere\transaction\dto\DepositRequest$DepositRequestBuilder.class
@@ -11,7 +12,9 @@ com\transactsphere\transaction\dto\TransferRequest$TransferRequestBuilder.class
 com\transactsphere\transaction\dto\WithdrawRequest$WithdrawRequestBuilder.class
 com\transactsphere\transaction\model\Transaction$TransactionBuilder.class
 com\transactsphere\transaction\model\TransactionStatus.class
+com\transactsphere\transaction\dto\UserProfileResponse.class
 com\transactsphere\transaction\exception\GlobalExceptionHandler.class
+com\transactsphere\transaction\dto\UserProfileResponse$UserProfileResponseBuilder.class
 com\transactsphere\transaction\controller\TransactionController.class
 com\transactsphere\transaction\repository\TransactionRepository.class
 com\transactsphere\transaction\dto\TransactionResponse.class

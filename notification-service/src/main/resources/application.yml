@@ -32,16 +32,14 @@ spring:
         spring.json.value.default.type: com.transactsphere.notification.dto.TransactionEvent
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${SPRING_MAIL_USERNAME}
-    password: ${SPRING_MAIL_PASSWORD}
+    host: localhost
+    port: 1025
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
-            enable: true
+            enable: false
 
 logging:
   level:

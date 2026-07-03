@@ -133,6 +133,10 @@ $acn = $acc.accountNumber
 ```
 *Note down the `"accountNumber"` in the output (e.g. `100018349271`).*
 
+Fetch account number
+$accResponse = Invoke-RestMethod -Uri http://localhost:8080/api/v1/accounts -Method GET -Headers @{"Authorization"="Bearer $token"}
+$acn = $accResponse[0].accountNumber
+
 #### 5. Deposit Funds
 Deposit ₹5,000 into the account:
 ```bash
