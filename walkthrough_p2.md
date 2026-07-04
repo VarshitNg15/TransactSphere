@@ -108,8 +108,19 @@ Start the following microservices in separate terminals or in the background:
 Invoke-RestMethod -Uri http://localhost:8080/api/v1/auth/register -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"username":"akarsh_demo", "email":"akarsh.demo@gmail.com", "password":"papu123", "role":"CUSTOMER"}'
 
 # Login
-$response = Invoke-RestMethod -Uri http://localhost:8080/api/v1/auth/login -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"username":"akarsh_demo", "password":"papu"}'
+# 1. Login to get a new token
+$response = Invoke-RestMethod -Uri http://localhost:8080/api/v1/auth/login -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"username":"akarsh_demo", "password":"papu123"}'
 $token = $response.accessToken
+
+# 2. Fetch your account number to set the $acn variable again
+$accResponse = Invoke-RestMethod -Uri http://localhost:8080/api/v1/accounts -Method GET -Headers @{"Authorization"="Bearer $token"}
+$acn = $accResponse[0].accountNumber
+
+# 3. Now you can deposit successfully!
+$body = '{"targetAccountNumber":"' + $acn + '", "amount":5000.00, "description":"Initial Deposit"}'
+Invoke-RestMethod -Uri http://localhost:8080/api/v1/transactions/deposit -Method POST -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} -Body $body
+
+
 
 ```
 *Take note of the `"accessToken"` in the response payload.*
