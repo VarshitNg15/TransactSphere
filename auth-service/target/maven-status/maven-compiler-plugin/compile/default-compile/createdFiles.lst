@@ -11,6 +11,8 @@ com\transactsphere\auth\dto\TokenRefreshRequest$TokenRefreshRequestBuilder.class
 com\transactsphere\auth\config\RedisConfig.class
 com\transactsphere\auth\config\SecurityConfig.class
 com\transactsphere\auth\dto\TokenRefreshRequest.class
+com\transactsphere\auth\config\DataInitializer.class
+com\transactsphere\auth\dto\ForgotPasswordRequest.class
 com\transactsphere\auth\dto\AuthResponse$AuthResponseBuilder.class
 com\transactsphere\auth\dto\LoginRequest.class
 com\transactsphere\auth\exception\InvalidTokenException.class

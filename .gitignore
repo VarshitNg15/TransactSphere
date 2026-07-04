@@ -45,3 +45,7 @@ Desktop.ini
 *.log
 logs/
 **/logs/
+
+# Node/Frontend dependencies
+node_modules/
+dist/

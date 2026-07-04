@@ -46,4 +46,12 @@ public class AuthController {
         response.put("message", "Logged out successfully");
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.resetPassword(request);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Password reset successfully");
+        return ResponseEntity.ok(response);
+    }
 }

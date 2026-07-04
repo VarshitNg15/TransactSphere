@@ -1,4 +1,5 @@
 com\transactsphere\account\config\RedisConfig.class
+com\transactsphere\account\exception\AccountAlreadyExistsException.class
 com\transactsphere\account\dto\AccountCreateRequest.class
 com\transactsphere\account\model\AccountType.class
 com\transactsphere\account\exception\GlobalExceptionHandler.class

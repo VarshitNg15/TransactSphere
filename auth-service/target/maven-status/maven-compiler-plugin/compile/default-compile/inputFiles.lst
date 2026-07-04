@@ -3,7 +3,9 @@ E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\rep
 E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\config\SecurityConfig.java
 E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\service\JwtService.java
 E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\exception\InvalidTokenException.java
+E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\config\DataInitializer.java
 E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\AuthApplication.java
+E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\dto\ForgotPasswordRequest.java
 E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\config\RedisConfig.java
 E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\dto\TokenRefreshRequest.java
 E:\Project\TransactSphere\auth-service\src\main\java\com\transactsphere\auth\service\AuthService.java

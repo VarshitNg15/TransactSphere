@@ -35,6 +35,9 @@ public class UserProfile {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @Column(name = "kyc_document", columnDefinition = "TEXT")
+    private String kycDocument;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "kyc_status", nullable = false, length = 20)
     private KycStatus kycStatus;

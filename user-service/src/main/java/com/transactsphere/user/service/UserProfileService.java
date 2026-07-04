@@ -53,6 +53,9 @@ public class UserProfileService {
         profile.setPhoneNumber(request.getPhoneNumber());
         profile.setEmail(request.getEmail());
         profile.setAddress(request.getAddress());
+        if (request.getKycDocument() != null && !request.getKycDocument().isEmpty()) {
+            profile.setKycDocument(request.getKycDocument());
+        }
 
         UserProfile saved = userProfileRepository.save(profile);
         return mapToResponse(saved);
@@ -99,6 +102,7 @@ public class UserProfileService {
                 .phoneNumber(profile.getPhoneNumber())
                 .email(profile.getEmail())
                 .address(profile.getAddress())
+                .kycDocument(profile.getKycDocument())
                 .kycStatus(profile.getKycStatus())
                 .createdAt(profile.getCreatedAt())
                 .updatedAt(profile.getUpdatedAt())

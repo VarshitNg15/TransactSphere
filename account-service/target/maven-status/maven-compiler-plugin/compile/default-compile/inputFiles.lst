@@ -1,5 +1,6 @@
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\config\RedisConfig.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\dto\AccountResponse.java
+E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\exception\AccountAlreadyExistsException.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\AccountApplication.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\dto\InternalTransferRequest.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\exception\InsufficientBalanceException.java

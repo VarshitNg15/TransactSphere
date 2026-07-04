@@ -31,4 +31,6 @@ public class UserProfileUpdateRequest {
 
     @NotBlank(message = "Address is required")
     private String address;
+
+    private String kycDocument;
 }

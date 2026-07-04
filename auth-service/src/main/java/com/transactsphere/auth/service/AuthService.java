@@ -115,4 +115,20 @@ public class AuthService {
             jwtService.blacklistToken(token);
         }
     }
+
+    /**
+     * Resets user password directly if username and email match.
+     */
+    @Transactional
+    public void resetPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!user.getEmail().equalsIgnoreCase(request.getEmail())) {
+            throw new IllegalArgumentException("Email does not match the registered email for this user");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
 }

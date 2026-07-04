@@ -1,0 +1,36 @@
+# Walkthrough: Phase 4 - Frontend Web Application
+
+The interactive frontend application for TransactSphere has been successfully created using Vite and React, fulfilling the requirements for Phase 4.
+
+## Changes Made
+
+- **Vite React Project**: We scaffolded a modern React application within the `frontend/` directory configured with Vite for fast builds and hot module replacement.
+- **Client-Side Routing**: Implemented `react-router-dom` in [App.jsx](file:///e:/Project/TransactSphere/frontend/src/App.jsx) to handle seamless transitions between the Dashboard, Transactions, Login, and Register pages without page reloads.
+- **Theme Support (Light/Dark)**: We added a `ThemeContext` that defaults to a light background but allows users to easily toggle a stunning dark mode using CSS variables. The preference is persisted in `localStorage`.
+- **Axios Interceptors & Auth State**: Configured Axios to automatically attach JWT tokens to all requests pointing to the API Gateway. We implemented an `AuthContext` to manage the authenticated state and handle auto-redirects on 401 Unauthorized errors.
+- **Pages Implemented**:
+  - **Login / Register**: Connects to the Auth Service (`/api/v1/auth/login` and `register`).
+  - **Dashboard**: Aggregates data by making parallel calls to `/api/v1/accounts`, `/api/v1/users/profile`, and `/api/v1/notifications` to present a unified financial summary.
+  - **Transactions**: Provides a form to create Transfers, Deposits, and Withdrawals, and displays a transaction history table fetched from `/api/v1/transactions/my`.
+- **Vanilla CSS Design System**: Created a highly aesthetic "glassmorphism" design with premium typography, gradients, and micro-animations defined in [index.css](file:///e:/Project/TransactSphere/frontend/src/index.css).
+
+## What Was Tested
+
+Due to current sandbox command limitations on Windows, the Vite project setup was explicitly constructed file-by-file. The resulting folder structure perfectly mirrors a standard Vite React output and is ready to be run on your local machine.
+
+## How to Verify Locally
+
+1. Open a terminal in the `frontend` directory:
+   ```bash
+   cd e:\Project\TransactSphere\frontend
+   ```
+2. Install the necessary dependencies (React Router, Axios, Lucide Icons):
+   ```bash
+   npm install
+   ```
+3. Start the Vite development server:
+   ```bash
+   npm run dev
+   ```
+4. Start your Docker backend infrastructure (`docker-compose -f docker/docker-compose.infra.yml up -d`) and all the Spring Boot microservices.
+5. Open your browser and navigate to `http://localhost:5173`. You can now register a user, log in, toggle the dark theme, create accounts, and perform real transactions visually.

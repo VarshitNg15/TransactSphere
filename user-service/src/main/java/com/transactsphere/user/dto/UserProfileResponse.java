@@ -18,6 +18,7 @@ public class UserProfileResponse {
     private String phoneNumber;
     private String email;
     private String address;
+    private String kycDocument;
     private KycStatus kycStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

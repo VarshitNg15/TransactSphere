@@ -30,6 +30,11 @@ public class AccountService {
      */
     @Transactional
     public AccountResponse createAccount(Long userId, AccountCreateRequest request) {
+        if (accountRepository.existsByUserIdAndAccountType(userId, request.getAccountType())) {
+            throw new com.transactsphere.account.exception.AccountAlreadyExistsException(
+                    "User already has an account of type: " + request.getAccountType());
+        }
+        
         String accountNumber = generateUniqueAccountNumber();
         Account account = Account.builder()
                 .accountNumber(accountNumber)
