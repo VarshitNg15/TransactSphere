@@ -1,6 +1,6 @@
 # TransactSphere Banking Platform
 
-TransactSphere is an enterprise-grade, event-driven microservices banking application designed for scalability, security, and high performance. It features isolated databases per service, global API routing and rate-limiting, secure JWT-based authentication, Redis caching, real-time fraud checking, and asynchronous notifications.
+TransactSphere is an enterprise-grade, event-driven microservices banking application designed for scalability, security, and high performance. It features isolated databases per service, global API routing and rate-limiting, secure JWT-based authentication, Redis caching, real-time fraud checking, asynchronous notifications.
 
 ---
 
