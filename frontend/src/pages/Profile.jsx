@@ -82,11 +82,11 @@ const Profile = () => {
     setUploading(true);
     try {
       await api.put('/users/profile', {
-        firstName: profile.firstName || 'User',
-        lastName: profile.lastName || 'Name',
-        phoneNumber: profile.phoneNumber || '0000000000',
-        email: profile.email || 'user@example.com',
-        address: profile.address || 'Address',
+        firstName: profile.firstName || formData.firstName || '',
+        lastName: profile.lastName || formData.lastName || '',
+        phoneNumber: profile.phoneNumber || formData.phoneNumber || '',
+        email: profile.email || formData.email || '',
+        address: profile.address || formData.address || '',
         kycDocument: kycFileBase64
       });
       await fetchData();

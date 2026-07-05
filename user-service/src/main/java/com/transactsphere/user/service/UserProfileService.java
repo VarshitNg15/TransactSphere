@@ -27,6 +27,7 @@ public class UserProfileService {
                 .orElseGet(() -> {
                     UserProfile newProfile = UserProfile.builder()
                             .id(userId)
+                            .uniqueId(String.format("USR-%06d", userId))
                             .username(username)
                             .email(username + "@transactsphere.com")
                             .kycStatus(KycStatus.PENDING)
@@ -44,6 +45,7 @@ public class UserProfileService {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElse(UserProfile.builder()
                         .id(userId)
+                        .uniqueId(String.format("USR-%06d", userId))
                         .username(username)
                         .kycStatus(KycStatus.PENDING)
                         .build());
@@ -96,6 +98,7 @@ public class UserProfileService {
     private UserProfileResponse mapToResponse(UserProfile profile) {
         return UserProfileResponse.builder()
                 .id(profile.getId())
+                .uniqueId(profile.getUniqueId())
                 .username(profile.getUsername())
                 .firstName(profile.getFirstName())
                 .lastName(profile.getLastName())

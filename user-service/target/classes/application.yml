@@ -1,7 +1,13 @@
 server:
   port: 8082
+  tomcat:
+    max-http-form-post-size: 10MB
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   application:
     name: user-service
 

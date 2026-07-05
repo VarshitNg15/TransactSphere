@@ -3,14 +3,24 @@ import api from '../api/axiosConfig';
 import './Transactions.css';
 
 const Transactions = () => {
+  const [activeTab, setActiveTab] = useState('transfer'); // transfer, requests
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [incomingReqs, setIncomingReqs] = useState([]);
+  const [outgoingReqs, setOutgoingReqs] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [form, setForm] = useState({
-    type: 'TRANSFER', // TRANSFER, DEPOSIT, WITHDRAWAL
+    type: 'TRANSFER', // Only TRANSFER now
     sourceAccount: '',
     targetAccount: '',
+    amount: '',
+    description: ''
+  });
+
+  const [reqForm, setReqForm] = useState({
+    requesterAccountNumber: '',
+    targetUsername: '',
     amount: '',
     description: ''
   });
@@ -30,10 +40,17 @@ const Transactions = () => {
       setAccounts(accRes.data);
       if (accRes.data.length > 0) {
         setForm(prev => ({ ...prev, sourceAccount: accRes.data[0].accountNumber }));
+        setReqForm(prev => ({ ...prev, requesterAccountNumber: accRes.data[0].accountNumber }));
       }
       if (Array.isArray(txRes.data)) {
         setTransactions(txRes.data);
       }
+      
+      api.get('/requests/incoming').then(res => setIncomingReqs(res.data)).catch(console.error);
+      if (accRes.data.length > 0) {
+         api.get(`/requests/outgoing?accountNumber=${accRes.data[0].accountNumber}`).then(res => setOutgoingReqs(res.data)).catch(console.error);
+      }
+
     } catch (err) {
       console.error('Failed to fetch data', err);
     } finally {
@@ -44,153 +61,292 @@ const Transactions = () => {
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+  
+  const handleReqInputChange = (e) => {
+    setReqForm({ ...reqForm, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ text: 'Processing...', type: 'info' });
     
     try {
-      let endpoint = '';
       const payload = {
         amount: parseFloat(form.amount),
-        description: form.description
+        description: form.description,
+        sourceAccountNumber: form.sourceAccount,
+        targetAccountNumber: form.targetAccount
       };
 
-      if (form.type === 'TRANSFER') {
-        endpoint = '/transactions/transfer';
-        payload.sourceAccountNumber = form.sourceAccount;
-        payload.targetAccountNumber = form.targetAccount;
-      } else if (form.type === 'DEPOSIT') {
-        endpoint = '/transactions/deposit';
-        payload.targetAccountNumber = form.sourceAccount;
-      } else if (form.type === 'WITHDRAWAL') {
-        endpoint = '/transactions/withdraw';
-        payload.sourceAccountNumber = form.sourceAccount;
-      }
-
-      await api.post(endpoint, payload);
-      setMessage({ text: 'Transaction successful!', type: 'success' });
+      await api.post('/transactions/transfer', payload);
+      setMessage({ text: 'Transfer successful!', type: 'success' });
       setForm({ ...form, amount: '', description: '', targetAccount: '' });
-      fetchData(); // refresh data
+      fetchData(); 
     } catch (err) {
-      setMessage({ text: err.response?.data?.message || 'Transaction failed.', type: 'error' });
+      setMessage({ text: err.response?.data?.message || 'Transfer failed.', type: 'error' });
     }
   };
 
-  if (loading) return <div className="loader">Loading Transactions...</div>;
+  const handleRequestSubmit = async (e) => {
+    e.preventDefault();
+    setMessage({ text: 'Sending request...', type: 'info' });
+    try {
+      await api.post('/requests', {
+        ...reqForm,
+        amount: parseFloat(reqForm.amount)
+      });
+      setMessage({ text: 'Money request sent successfully!', type: 'success' });
+      setReqForm({ ...reqForm, amount: '', description: '', targetUsername: '' });
+      fetchData();
+    } catch (err) {
+      setMessage({ text: err.response?.data?.message || 'Failed to send request.', type: 'error' });
+    }
+  };
+
+  const handleAcceptRequest = async (id) => {
+    if (accounts.length === 0) return alert('No accounts to transfer from');
+    try {
+      await api.put(`/requests/${id}/accept?sourceAccountNumber=${accounts[0].accountNumber}`);
+      setMessage({ text: 'Request accepted and money transferred!', type: 'success' });
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (id) => {
+    try {
+      await api.put(`/requests/${id}/reject`);
+      setMessage({ text: 'Request rejected.', type: 'info' });
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reject request');
+    }
+  };
+
+  if (loading) return <div className="dashboard-container"><div className="loader"></div></div>;
 
   return (
-    <div className="transactions-container">
-      <div className="glass-panel tx-form-panel">
-        <h2>New Transaction</h2>
-        
-        {message.text && (
-          <div className={`message-box ${message.type}`}>
-            {message.text}
-          </div>
-        )}
+    <div className="dashboard-container">
+      <div className="dashboard-header glass-panel" style={{ display: 'flex', gap: '15px' }}>
+        <button 
+          className="auth-button" 
+          onClick={() => { setActiveTab('transfer'); setMessage({text:'', type:''}); }}
+          style={{ background: activeTab === 'transfer' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)' }}
+        >
+          Transfer Money
+        </button>
+        <button 
+          className="auth-button" 
+          onClick={() => { setActiveTab('requests'); setMessage({text:'', type:''}); }}
+          style={{ background: activeTab === 'requests' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)' }}
+        >
+          Money Requests
+        </button>
+      </div>
 
-        <form onSubmit={handleSubmit} className="tx-form">
-          <div className="form-group">
-            <label>Transaction Type</label>
-            <select name="type" value={form.type} onChange={handleInputChange} className="input-field">
-              <option value="TRANSFER">Transfer</option>
-              <option value="DEPOSIT">Deposit</option>
-              <option value="WITHDRAWAL">Withdrawal</option>
-            </select>
+      {message.text && (
+        <div className={`message-box ${message.type}`} style={{ margin: '20px 0' }}>
+          {message.text}
+        </div>
+      )}
+
+      {activeTab === 'transfer' && (
+        <div className="transactions-container" style={{ padding: 0, marginTop: '20px' }}>
+          <div className="glass-panel tx-form-panel">
+            <h2>Send Money</h2>
+            <form onSubmit={handleSubmit} className="tx-form">
+              <div className="form-group">
+                <label>Source Account</label>
+                <select name="sourceAccount" value={form.sourceAccount} onChange={handleInputChange} className="input-field" required>
+                  {accounts.map(acc => (
+                    <option key={acc.accountNumber} value={acc.accountNumber}>
+                      {acc.accountNumber} - ₹{acc.balance}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Target Account Number</label>
+                <input 
+                  type="text" 
+                  name="targetAccount" 
+                  value={form.targetAccount} 
+                  onChange={handleInputChange} 
+                  className="input-field" 
+                  required 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Amount (₹)</label>
+                <input 
+                  type="number" 
+                  name="amount" 
+                  value={form.amount} 
+                  onChange={handleInputChange} 
+                  className="input-field" 
+                  min="1"
+                  step="0.01"
+                  required 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Description</label>
+                <input 
+                  type="text" 
+                  name="description" 
+                  value={form.description} 
+                  onChange={handleInputChange} 
+                  className="input-field" 
+                />
+              </div>
+
+              <button type="submit" className="tx-button auth-button">Transfer Now</button>
+            </form>
           </div>
 
-          <div className="form-group">
-            <label>{form.type === 'DEPOSIT' ? 'Destination Account' : 'Source Account'}</label>
-            <select name="sourceAccount" value={form.sourceAccount} onChange={handleInputChange} className="input-field" required>
-              {accounts.map(acc => (
-                <option key={acc.accountNumber} value={acc.accountNumber}>
-                  {acc.accountNumber} - ₹{acc.balance} ({acc.accountType})
-                </option>
-              ))}
-            </select>
+          <div className="glass-panel tx-history-panel">
+            <h2>Transaction History</h2>
+            {transactions.length === 0 ? (
+              <p className="empty-state">No transactions found.</p>
+            ) : (
+              <div className="table-responsive">
+                <table className="tx-table" style={{ width: '100%', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+                      <th style={{ padding: '10px' }}>Date</th>
+                      <th style={{ padding: '10px' }}>ID</th>
+                      <th style={{ padding: '10px' }}>Amount</th>
+                      <th style={{ padding: '10px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map(tx => (
+                      <tr key={tx.transactionId} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '10px' }}>{new Date(tx.timestamp).toLocaleString()}</td>
+                        <td style={{ padding: '10px' }}><small>{tx.transactionId}</small></td>
+                        <td style={{ padding: '10px' }} className={accounts.some(a => a.accountNumber === tx.targetAccountNumber) ? 'text-success' : 'text-danger'}>
+                          ₹{tx.amount}
+                        </td>
+                        <td style={{ padding: '10px' }}>
+                          <span className={`status-badge ${tx.status.toLowerCase()}`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'requests' && (
+        <div className="transactions-container" style={{ padding: 0, marginTop: '20px' }}>
+          <div className="glass-panel tx-form-panel">
+            <h2>Request Money</h2>
+            <form onSubmit={handleRequestSubmit} className="tx-form">
+              <div className="form-group">
+                <label>Receive To Account</label>
+                <select name="requesterAccountNumber" value={reqForm.requesterAccountNumber} onChange={handleReqInputChange} className="input-field" required>
+                  {accounts.map(acc => (
+                    <option key={acc.accountNumber} value={acc.accountNumber}>
+                      {acc.accountNumber} - ₹{acc.balance}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Target Username</label>
+                <input 
+                  type="text" 
+                  name="targetUsername" 
+                  value={reqForm.targetUsername} 
+                  onChange={handleReqInputChange} 
+                  className="input-field" 
+                  required 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Amount (₹)</label>
+                <input 
+                  type="number" 
+                  name="amount" 
+                  value={reqForm.amount} 
+                  onChange={handleReqInputChange} 
+                  className="input-field" 
+                  min="1"
+                  step="0.01"
+                  required 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Description</label>
+                <input 
+                  type="text" 
+                  name="description" 
+                  value={reqForm.description} 
+                  onChange={handleReqInputChange} 
+                  className="input-field" 
+                />
+              </div>
+
+              <button type="submit" className="tx-button auth-button">Send Request</button>
+            </form>
           </div>
 
-          {form.type === 'TRANSFER' && (
-            <div className="form-group">
-              <label>Target Account Number</label>
-              <input 
-                type="text" 
-                name="targetAccount" 
-                value={form.targetAccount} 
-                onChange={handleInputChange} 
-                className="input-field" 
-                required 
-              />
+          <div className="glass-panel tx-history-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <h3 style={{ color: 'var(--warning)', marginBottom: '10px' }}>Incoming Requests</h3>
+              {incomingReqs.length === 0 ? <p style={{ color: '#9ca3af' }}>No incoming requests.</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {incomingReqs.map(req => (
+                    <div key={req.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p><strong>₹{req.amount}</strong> requested for {req.description}</p>
+                        <small style={{ color: '#9ca3af' }}>To: {req.requesterAccountNumber}</small>
+                      </div>
+                      {req.status === 'PENDING' ? (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button onClick={() => handleAcceptRequest(req.id)} className="auth-button" style={{ background: 'var(--success)', padding: '5px 15px' }}>Accept</button>
+                          <button onClick={() => handleRejectRequest(req.id)} className="auth-button" style={{ background: 'var(--danger)', padding: '5px 15px' }}>Reject</button>
+                        </div>
+                      ) : (
+                        <span className={`status-badge ${req.status.toLowerCase()}`}>{req.status}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
 
-          <div className="form-group">
-            <label>Amount (₹)</label>
-            <input 
-              type="number" 
-              name="amount" 
-              value={form.amount} 
-              onChange={handleInputChange} 
-              className="input-field" 
-              min="1"
-              step="0.01"
-              required 
-            />
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
+              <h3 style={{ color: '#60a5fa', marginBottom: '10px' }}>Sent Requests</h3>
+              {outgoingReqs.length === 0 ? <p style={{ color: '#9ca3af' }}>No sent requests.</p> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {outgoingReqs.map(req => (
+                    <div key={req.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p>Requested <strong>₹{req.amount}</strong> from @{req.targetUsername}</p>
+                        <small style={{ color: '#9ca3af' }}>{req.description}</small>
+                      </div>
+                      <span className={`status-badge ${req.status.toLowerCase()}`}>{req.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-
-          <div className="form-group">
-            <label>Description</label>
-            <input 
-              type="text" 
-              name="description" 
-              value={form.description} 
-              onChange={handleInputChange} 
-              className="input-field" 
-            />
-          </div>
-
-          <button type="submit" className="tx-button">Confirm Transaction</button>
-        </form>
-      </div>
-
-      <div className="glass-panel tx-history-panel">
-        <h2>Transaction History</h2>
-        {transactions.length === 0 ? (
-          <p className="empty-state">No transactions found.</p>
-        ) : (
-          <div className="table-responsive">
-            <table className="tx-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>ID</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map(tx => (
-                  <tr key={tx.transactionId}>
-                    <td>{new Date(tx.timestamp).toLocaleString()}</td>
-                    <td><small>{tx.transactionId.substring(0, 8)}...</small></td>
-                    <td>{tx.transactionType}</td>
-                    <td className={tx.transactionType === 'DEPOSIT' || (tx.transactionType === 'TRANSFER' && accounts.some(a => a.accountNumber === tx.targetAccountNumber)) ? 'text-success' : 'text-danger'}>
-                      ₹{tx.amount}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${tx.status.toLowerCase()}`}>
-                        {tx.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

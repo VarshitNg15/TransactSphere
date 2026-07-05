@@ -1,11 +1,15 @@
 com\transactsphere\transaction\client\UserClient.class
 com\transactsphere\transaction\dto\TransferRequest.class
 com\transactsphere\transaction\dto\AccountDto.class
+com\transactsphere\transaction\dto\CreateMoneyRequestDto.class
 com\transactsphere\transaction\dto\DepositRequest$DepositRequestBuilder.class
 com\transactsphere\transaction\model\TransactionType.class
+com\transactsphere\transaction\service\MoneyRequestService.class
 com\transactsphere\transaction\dto\InternalTransferRequest.class
+com\transactsphere\transaction\repository\MoneyRequestRepository.class
 com\transactsphere\transaction\dto\DepositRequest.class
 com\transactsphere\transaction\model\TransactionChannel.class
+com\transactsphere\transaction\model\MoneyRequest$MoneyRequestBuilder.class
 com\transactsphere\transaction\dto\AccountDto$AccountDtoBuilder.class
 com\transactsphere\transaction\dto\TransactionEvent.class
 com\transactsphere\transaction\dto\TransferRequest$TransferRequestBuilder.class
@@ -18,6 +22,9 @@ com\transactsphere\transaction\dto\UserProfileResponse$UserProfileResponseBuilde
 com\transactsphere\transaction\controller\TransactionController.class
 com\transactsphere\transaction\repository\TransactionRepository.class
 com\transactsphere\transaction\dto\TransactionResponse.class
+com\transactsphere\transaction\model\MoneyRequest.class
+com\transactsphere\transaction\dto\MoneyRequestDto$MoneyRequestDtoBuilder.class
+com\transactsphere\transaction\model\MoneyRequestStatus.class
 com\transactsphere\transaction\config\KafkaConfig.class
 com\transactsphere\transaction\dto\InternalTransferRequest$InternalTransferRequestBuilder.class
 com\transactsphere\transaction\dto\TransactionResponse$TransactionResponseBuilder.class
@@ -27,3 +34,5 @@ com\transactsphere\transaction\dto\WithdrawRequest.class
 com\transactsphere\transaction\client\AccountClient.class
 com\transactsphere\transaction\dto\TransactionEvent$TransactionEventBuilder.class
 com\transactsphere\transaction\TransactionApplication.class
+com\transactsphere\transaction\dto\MoneyRequestDto.class
+com\transactsphere\transaction\controller\MoneyRequestController.class

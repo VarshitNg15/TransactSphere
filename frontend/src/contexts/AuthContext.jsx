@@ -32,8 +32,10 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  const isAdmin = localStorage.getItem('role') === 'ADMIN';
+
   return (
-    <AuthContext.Provider value={{ token, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ token, isAuthenticated, isAdmin, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

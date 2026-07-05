@@ -1,10 +1,16 @@
 server:
   port: 8080
+  tomcat:
+    max-http-form-post-size: 10MB
 
 spring:
   application:
     name: gateway
   
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   # Redis Configuration for Rate Limiting & Gateway sessions
   data:
     redis:
@@ -68,7 +74,7 @@ spring:
         - id: transaction-service
           uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8084
           predicates:
-            - Path=/api/v1/transactions/**
+            - Path=/api/v1/transactions/**,/api/v1/requests/**
           filters:
             - name: RequestRateLimiter
               args:

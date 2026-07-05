@@ -131,4 +131,12 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
     }
+
+    @Transactional
+    public void blockUser(Long userId, boolean block) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        user.setActive(!block);
+        userRepository.save(user);
+    }
 }

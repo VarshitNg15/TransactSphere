@@ -54,4 +54,18 @@ public class AuthController {
         response.put("message", "Password reset successfully");
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/users/{id}/block")
+    public ResponseEntity<Map<String, String>> blockUser(
+            @PathVariable Long id, 
+            @RequestParam("block") boolean block, 
+            @RequestHeader(value = "X-User-Roles", required = false) String roles) {
+        if (roles == null || !roles.contains("ROLE_ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        authService.blockUser(id, block);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", block ? "User blocked successfully" : "User unblocked successfully");
+        return ResponseEntity.ok(response);
+    }
 }

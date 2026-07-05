@@ -57,6 +57,21 @@ public class AccountController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/user/{userId}/freeze")
+    public ResponseEntity<List<AccountResponse>> freezeUserAccounts(
+            @PathVariable("userId") Long userId,
+            @RequestParam("freeze") boolean freeze,
+            @RequestHeader("X-User-Roles") String roles) {
+        if (!isAdminOrEmployee(roles)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        List<AccountResponse> accounts = accountService.getAccountsByUserId(userId);
+        for (AccountResponse acc : accounts) {
+            accountService.setFreezeStatus(acc.getAccountNumber(), freeze);
+        }
+        return ResponseEntity.ok(accountService.getAccountsByUserId(userId));
+    }
+
     private boolean isAdminOrEmployee(String roles) {
         return roles != null && (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_EMPLOYEE"));
     }

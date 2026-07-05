@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.transactsphere.auth.controller.AuthControllerTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.513 s -- in com.transactsphere.auth.controller.AuthControllerTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.769 s -- in com.transactsphere.auth.controller.AuthControllerTest

@@ -35,6 +35,7 @@ public class Account {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal balance;
 
+    @Builder.Default
     @Column(name = "is_frozen", nullable = false)
     private boolean isFrozen = false;
 

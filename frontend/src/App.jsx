@@ -11,8 +11,17 @@ import AdminDashboard from './pages/AdminDashboard';
 import { useAuth } from './contexts/AuthContext';
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (isAdmin) return <Navigate to="/admin" />;
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (!isAdmin) return <Navigate to="/dashboard" />;
+  return children;
 };
 
 function App() {
@@ -53,9 +62,9 @@ function App() {
             <Route 
               path="/admin" 
               element={
-                <PrivateRoute>
+                <AdminRoute>
                   <AdminDashboard />
-                </PrivateRoute>
+                </AdminRoute>
               } 
             />
           </Routes>

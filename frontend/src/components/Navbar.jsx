@@ -6,7 +6,7 @@ import { Sun, Moon, LogOut, Wallet } from 'lucide-react';
 import './Navbar.css';
 
 const Navbar = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -29,9 +29,15 @@ const Navbar = () => {
         </button>
         {isAuthenticated ? (
           <>
-            <Link to="/dashboard" className="nav-item">Dashboard</Link>
-            <Link to="/profile" className="nav-item">Profile</Link>
-            <Link to="/transactions" className="nav-item">Transactions</Link>
+            {isAdmin ? (
+              <Link to="/admin" className="nav-item">Admin Dashboard</Link>
+            ) : (
+              <>
+                <Link to="/dashboard" className="nav-item">Dashboard</Link>
+                <Link to="/profile" className="nav-item">Profile</Link>
+                <Link to="/transactions" className="nav-item">Transactions</Link>
+              </>
+            )}
             <button className="icon-button" onClick={handleLogout} aria-label="Logout">
               <LogOut size={20} />
             </button>

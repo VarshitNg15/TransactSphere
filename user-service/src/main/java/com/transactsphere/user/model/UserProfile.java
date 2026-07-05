@@ -17,6 +17,9 @@ public class UserProfile {
     @Id
     private Long id; // Matches standard authentication userId
 
+    @Column(name = "unique_id", nullable = false, unique = true, length = 20)
+    private String uniqueId;
+
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 

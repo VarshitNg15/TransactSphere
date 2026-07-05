@@ -1,9 +1,12 @@
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\repository\FeedbackRepository.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\controller\UserProfileController.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\model\KycStatus.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\dto\UserProfileUpdateRequest.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\controller\FeedbackController.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\repository\UserProfileRepository.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\controller\InternalUserController.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\model\UserProfile.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\service\UserProfileService.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\dto\UserProfileResponse.java
+E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\model\Feedback.java
 E:\Project\TransactSphere\user-service\src\main\java\com\transactsphere\user\UserApplication.java

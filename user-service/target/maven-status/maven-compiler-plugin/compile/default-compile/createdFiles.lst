@@ -1,12 +1,16 @@
+com\transactsphere\user\controller\FeedbackController.class
+com\transactsphere\user\repository\FeedbackRepository.class
 com\transactsphere\user\dto\UserProfileUpdateRequest$UserProfileUpdateRequestBuilder.class
 com\transactsphere\user\model\UserProfile.class
 com\transactsphere\user\repository\UserProfileRepository.class
+com\transactsphere\user\model\Feedback$FeedbackBuilder.class
 com\transactsphere\user\model\KycStatus.class
 com\transactsphere\user\dto\UserProfileResponse$UserProfileResponseBuilder.class
 com\transactsphere\user\UserApplication.class
 com\transactsphere\user\service\UserProfileService.class
 com\transactsphere\user\dto\UserProfileResponse.class
 com\transactsphere\user\controller\UserProfileController.class
+com\transactsphere\user\model\Feedback.class
 com\transactsphere\user\model\UserProfile$UserProfileBuilder.class
 com\transactsphere\user\controller\InternalUserController.class
 com\transactsphere\user\dto\UserProfileUpdateRequest.class
