@@ -39,9 +39,9 @@ const Register = () => {
       <div className="glass-panel auth-card">
         <h2 className="auth-title">Create Account</h2>
         <p className="auth-subtitle">Join TransactSphere today</p>
-        
+
         {error && <div className="auth-error">{error}</div>}
-        
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Username</label>
@@ -51,16 +51,20 @@ const Register = () => {
             <label>Email</label>
             <input type="email" name="email" className="input-field" onChange={handleChange} required />
           </div>
+          <div className="form-group">
+            <label>Phone Number</label>
+            <input type="text" name="phone" className="input-field" onChange={handleChange} required />
+          </div>
           <div className="form-group" style={{ position: 'relative' }}>
             <label>Password</label>
-            <input 
-              type={showPassword ? "text" : "password"} 
-              name="password" 
-              className="input-field" 
-              onChange={handleChange} 
-              required 
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              className="input-field"
+              onChange={handleChange}
+              required
             />
-            <button 
+            <button
               type="button"
               className="password-toggle"
               onClick={() => setShowPassword(!showPassword)}
