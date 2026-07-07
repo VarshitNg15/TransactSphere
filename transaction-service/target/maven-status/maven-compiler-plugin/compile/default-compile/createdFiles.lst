@@ -13,6 +13,7 @@ com\transactsphere\transaction\model\MoneyRequest$MoneyRequestBuilder.class
 com\transactsphere\transaction\dto\AccountDto$AccountDtoBuilder.class
 com\transactsphere\transaction\dto\TransactionEvent.class
 com\transactsphere\transaction\dto\TransferRequest$TransferRequestBuilder.class
+com\transactsphere\transaction\controller\InternalTransactionController.class
 com\transactsphere\transaction\dto\WithdrawRequest$WithdrawRequestBuilder.class
 com\transactsphere\transaction\model\Transaction$TransactionBuilder.class
 com\transactsphere\transaction\model\TransactionStatus.class

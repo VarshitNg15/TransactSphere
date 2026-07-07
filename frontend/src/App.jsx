@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Transactions from './pages/Transactions';
+import Statements from './pages/Statements';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import { useAuth } from './contexts/AuthContext';
@@ -28,6 +29,11 @@ function App() {
   return (
     <Router>
       <div className="app-container">
+        <div className="app-bg-mesh">
+          <div className="mesh-blob mesh-1"></div>
+          <div className="mesh-blob mesh-2"></div>
+          <div className="mesh-blob mesh-3"></div>
+        </div>
         <Navbar />
         <main className="main-content">
           <Routes>
@@ -48,6 +54,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Transactions />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/statements" 
+              element={
+                <PrivateRoute>
+                  <Statements />
                 </PrivateRoute>
               } 
             />

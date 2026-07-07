@@ -2,9 +2,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  margin: 1rem;
-  border-radius: 12px;
+  padding: 1.25rem 2.5rem;
+  margin: 1.5rem 2rem;
+  border-radius: 20px;
+  position: sticky;
+  top: 1.5rem;
+  z-index: 100;
+  animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .nav-brand {
@@ -15,43 +24,72 @@
 .brand-link {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.5rem;
-  font-weight: 700;
+  gap: 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 800;
   color: var(--text-primary);
+  letter-spacing: -0.5px;
 }
 
 .brand-icon {
   color: var(--accent);
+  filter: drop-shadow(0 0 8px var(--accent-glow));
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.85rem;
 }
 
 .nav-item {
-  color: var(--text-primary);
+  color: var(--text-secondary);
   font-weight: 500;
-  transition: color 0.2s;
+  font-size: 0.95rem;
+  position: relative;
+  padding: 0.5rem 0;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.3px;
+}
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .nav-item:hover {
-  color: var(--accent);
+  color: var(--text-primary);
+}
+
+.nav-item:hover::after {
+  width: 100%;
 }
 
 .icon-button {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
-  padding: 0.5rem;
+  padding: 0.65rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: none;
 }
 
 .icon-button:hover {
-  background: var(--bg-secondary);
-  color: var(--accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  transform: translateY(-2px) rotate(15deg);
+  box-shadow: 0 4px 12px var(--accent-glow);
 }

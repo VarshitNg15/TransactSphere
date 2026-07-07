@@ -36,6 +36,7 @@ const Navbar = () => {
                 <Link to="/dashboard" className="nav-item">Dashboard</Link>
                 <Link to="/profile" className="nav-item">Profile</Link>
                 <Link to="/transactions" className="nav-item">Transactions</Link>
+                <Link to="/statements" className="nav-item">Statements</Link>
               </>
             )}
             <button className="icon-button" onClick={handleLogout} aria-label="Logout">

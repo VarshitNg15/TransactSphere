@@ -37,13 +37,15 @@ const Login = () => {
 
   return (
     <div className="auth-container">
-      <div className="glass-panel auth-card">
-        <h2 className="auth-title">Welcome Back</h2>
-        <p className="auth-subtitle">Login to your TransactSphere account</p>
+      <div className="glass-panel auth-panel">
+        <div className="auth-header">
+          <h2 className="auth-title">Welcome Back</h2>
+          <p className="auth-subtitle">Login to your TransactSphere account</p>
+        </div>
         
         {error && <div className="auth-error">{error}</div>}
         
-        <form onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Username</label>
             <input 
@@ -51,36 +53,37 @@ const Login = () => {
               className="input-field" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
               required
             />
           </div>
-          <div className="form-group" style={{ position: 'relative' }}>
+          <div className="form-group">
             <label>Password</label>
             <input 
               type={showPassword ? "text" : "password"} 
               className="input-field" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
               required
             />
             <button 
               type="button"
               className="password-toggle"
               onClick={() => setShowPassword(!showPassword)}
-              style={{ position: 'absolute', right: '10px', top: '35px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
             <div style={{ textAlign: 'right', marginTop: '5px' }}>
-              <Link to="/forgot-password" style={{ fontSize: '12px', color: '#9ca3af' }}>Forgot Password?</Link>
+              <Link to="/forgot-password" style={{ fontSize: '13px', color: 'var(--accent)' }}>Forgot Password?</Link>
             </div>
           </div>
           <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
         <div className="auth-footer">
-          Don't have an account? <Link to="/register">Register</Link>
+          Don't have an account? <Link to="/register">Register now</Link>
         </div>
       </div>
     </div>

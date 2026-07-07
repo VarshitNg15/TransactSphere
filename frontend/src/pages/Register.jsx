@@ -9,6 +9,7 @@ const Register = () => {
     username: '',
     password: '',
     email: '',
+    phone: '',
     role: 'CUSTOMER'
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +29,7 @@ const Register = () => {
       await api.post('/auth/register', formData);
       navigate('/login');
     } catch (err) {
-      setError('Registration failed. Please try a different username.');
+      setError('Registration failed. Please try a different username or email.');
     } finally {
       setLoading(false);
     }
@@ -36,31 +37,34 @@ const Register = () => {
 
   return (
     <div className="auth-container">
-      <div className="glass-panel auth-card">
-        <h2 className="auth-title">Create Account</h2>
-        <p className="auth-subtitle">Join TransactSphere today</p>
+      <div className="glass-panel auth-panel">
+        <div className="auth-header">
+          <h2 className="auth-title">Create Account</h2>
+          <p className="auth-subtitle">Join TransactSphere today</p>
+        </div>
 
         {error && <div className="auth-error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Username</label>
-            <input type="text" name="username" className="input-field" onChange={handleChange} required />
+            <input type="text" name="username" className="input-field" placeholder="Choose a username" onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label>Email</label>
-            <input type="email" name="email" className="input-field" onChange={handleChange} required />
+            <input type="email" name="email" className="input-field" placeholder="name@example.com" onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label>Phone Number</label>
-            <input type="text" name="phone" className="input-field" onChange={handleChange} required />
+            <input type="text" name="phone" className="input-field" placeholder="e.g. +1 234 567 8900" onChange={handleChange} required />
           </div>
-          <div className="form-group" style={{ position: 'relative' }}>
+          <div className="form-group">
             <label>Password</label>
             <input
               type={showPassword ? "text" : "password"}
               name="password"
               className="input-field"
+              placeholder="Create a strong password"
               onChange={handleChange}
               required
             />
@@ -68,17 +72,16 @@ const Register = () => {
               type="button"
               className="password-toggle"
               onClick={() => setShowPassword(!showPassword)}
-              style={{ position: 'absolute', right: '10px', top: '35px', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
           <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? 'Creating Account...' : 'Register'}
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
         <div className="auth-footer">
-          Already have an account? <Link to="/login">Login</Link>
+          Already have an account? <Link to="/login">Sign In</Link>
         </div>
       </div>
     </div>

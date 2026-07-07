@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
-import { CreditCard, Bell, MessageSquare } from 'lucide-react';
+import { CreditCard, Bell, MessageSquare, Plus, PlusCircle, Activity } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
   const [profile, setProfile] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -21,10 +22,22 @@ const Dashboard = () => {
           api.get('/accounts'),
           api.get('/notifications').catch(() => ({ data: [] }))
         ]);
-        setProfile(profileRes.data);
+        
+        const userProfile = profileRes.data;
+        setProfile(userProfile);
         setAccounts(accountsRes.data);
         if (Array.isArray(notificationsRes.data)) {
           setNotifications(notificationsRes.data.slice(0, 5));
+        }
+
+        // Fetch user analytics from analytics-service
+        if (userProfile && userProfile.id) {
+          try {
+            const analyticsRes = await api.get(`/analytics/user/${userProfile.id}`);
+            setAnalytics(analyticsRes.data);
+          } catch (analyticsErr) {
+            console.error('Failed to load user analytics', analyticsErr);
+          }
         }
       } catch (err) {
         console.error('Failed to load dashboard data', err);
@@ -63,40 +76,76 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) return <div className="loader"></div>;
+  if (loading) return <div className="dashboard-container"><div className="loader"></div></div>;
 
   return (
-    <div className="dashboard-container" style={{ position: 'relative' }}>
-      <header className="dashboard-header glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="dashboard-container">
+      <header className="dashboard-header glass-panel">
         <div>
-          <h1 style={{ fontSize: '2rem', marginBottom: '5px' }}>Welcome back, <span style={{ color: 'var(--accent)' }}>{profile?.firstName || profile?.username || 'User'}</span>!</h1>
-          <p style={{ color: '#9ca3af' }}>Here is your financial summary.</p>
+          <h1>Welcome back, <span style={{ color: 'var(--accent)' }}>{profile?.firstName || profile?.username || 'User'}</span>!</h1>
+          <p>Here is your financial summary for today.</p>
         </div>
-        <button className="auth-button" onClick={() => setFeedbackOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageSquare size={18} /> Submit Feedback
+        <button className="auth-button" onClick={() => setFeedbackOpen(true)} style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <MessageSquare size={18} /> Feedback
         </button>
       </header>
 
-      <div className="grid-container" style={{ marginTop: '10px' }}>
+      {/* Analytics Overview Panel */}
+      {analytics && (
+        <div className="glass-panel" style={{ display: 'flex', gap: '2rem', padding: '1.5rem 2.5rem' }}>
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Activity size={16} color="var(--accent)" /> Total Transaction Volume
+            </p>
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, marginTop: '0.5rem' }}>
+              ₹{parseFloat(analytics.totalVolume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </h2>
+          </div>
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Deposits</p>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--success)', marginTop: '0.5rem' }}>
+              ₹{parseFloat(analytics.depositVolume || 0).toLocaleString('en-IN')}
+            </h2>
+          </div>
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Withdrawals</p>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.5rem' }}>
+              ₹{parseFloat(analytics.withdrawalVolume || 0).toLocaleString('en-IN')}
+            </h2>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Total Transactions</p>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginTop: '0.5rem' }}>
+              {analytics.totalCount || 0}
+            </h2>
+          </div>
+        </div>
+      )}
+
+      <div className="grid-container">
         <div className="glass-panel accounts-panel">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><CreditCard size={24} color="var(--accent)" /> My Accounts</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2><CreditCard size={28} color="var(--accent)" /> My Accounts</h2>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="auth-button" style={{ padding: '8px 12px', fontSize: '12px' }} onClick={() => createAccount('SAVINGS')}>+ Savings</button>
-              <button className="auth-button" style={{ padding: '8px 12px', fontSize: '12px', background: 'transparent', border: '1px solid var(--accent)' }} onClick={() => createAccount('CURRENT')}>+ Current</button>
+              <button onClick={() => createAccount('SAVINGS')} style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Plus size={16} /> Savings
+              </button>
+              <button onClick={() => createAccount('CURRENT')} style={{ padding: '8px 16px', fontSize: '13px', background: 'transparent', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <PlusCircle size={16} /> Current
+              </button>
             </div>
           </div>
           
           {accounts.length === 0 ? (
-            <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>You don't have any accounts yet. Create one to get started!</p>
+            <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: '2rem 0' }}>You don't have any accounts yet. Create one to get started!</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {accounts.map(acc => (
-                <div key={acc.accountNumber} style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
-                  <div style={{ fontSize: '12px', textTransform: 'uppercase', color: '#9ca3af', letterSpacing: '1px' }}>{acc.accountType}</div>
-                  <div style={{ fontSize: '1.2rem', fontFamily: 'monospace', margin: '10px 0', letterSpacing: '2px' }}>{acc.accountNumber}</div>
-                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>
-                    ₹{parseFloat(acc.balance).toFixed(2)}
+                <div key={acc.accountNumber} className="account-card">
+                  <div className="account-type">{acc.accountType} Account</div>
+                  <div className="account-number">{acc.accountNumber}</div>
+                  <div className="account-balance">
+                    ₹{parseFloat(acc.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                   {acc.frozen && <span className="status-badge fraudulent" style={{ position: 'absolute', top: '20px', right: '20px' }}>Frozen</span>}
                 </div>
@@ -106,33 +155,30 @@ const Dashboard = () => {
         </div>
 
         <div className="glass-panel notifications-panel">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}><Bell size={24} color="var(--warning)" /> Recent Notifications</h2>
+          <h2><Bell size={28} color="var(--warning)" /> Notifications</h2>
           {notifications.length === 0 ? (
-            <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No new notifications.</p>
+            <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: '2rem 0' }}>No new notifications right now.</p>
           ) : (
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {notifications.map((notif, idx) => (
-                <li key={idx} style={{ display: 'flex', gap: '15px', padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', borderLeft: '4px solid var(--accent)' }}>
-                  <Bell size={20} color="var(--accent)" style={{ marginTop: '3px' }} />
+                <div key={idx} className="notification-item">
+                  <Bell size={24} color="var(--accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div>
-                    <p style={{ marginBottom: '5px', fontSize: '0.95rem' }}>{notif.message}</p>
-                    <small style={{ color: '#64748b' }}>{new Date(notif.timestamp).toLocaleString()}</small>
+                    <p>{notif.message}</p>
+                    <small>{new Date(notif.timestamp).toLocaleString()}</small>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>
 
       {feedbackOpen && (
-        <div className="modal-overlay" onClick={() => setFeedbackOpen(false)} style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center'
-        }}>
-          <div className="modal-content glass-panel" onClick={e => e.stopPropagation()} style={{ width: '400px', position: 'relative' }}>
-            <button onClick={() => setFeedbackOpen(false)} style={{ position: 'absolute', right: '15px', top: '15px', background: 'var(--danger)', padding: '5px 10px', fontSize: '12px' }}>Close</button>
-            <h3 style={{ marginBottom: '20px' }}>Submit Feedback</h3>
+        <div className="modal-overlay" onClick={() => setFeedbackOpen(false)}>
+          <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setFeedbackOpen(false)} style={{ position: 'absolute', right: '20px', top: '20px', background: 'rgba(255,255,255,0.1)', padding: '6px 12px', fontSize: '13px' }}>Close</button>
+            <h3 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', fontFamily: 'Outfit' }}>Submit Feedback</h3>
             <form onSubmit={handleFeedbackSubmit}>
               <div className="form-group">
                 <label>Subject</label>
@@ -143,6 +189,7 @@ const Dashboard = () => {
                   onChange={e => setFeedbackForm({...feedbackForm, subject: e.target.value})}
                   required 
                   maxLength={50}
+                  placeholder="What is this regarding?"
                 />
               </div>
               <div className="form-group">
@@ -153,10 +200,12 @@ const Dashboard = () => {
                   onChange={e => setFeedbackForm({...feedbackForm, message: e.target.value})}
                   required 
                   rows={5}
+                  placeholder="Tell us your thoughts..."
+                  style={{ resize: 'vertical' }}
                 />
               </div>
-              <button type="submit" className="auth-button" disabled={feedbackSubmitting}>
-                {feedbackSubmitting ? 'Submitting...' : 'Submit'}
+              <button type="submit" style={{ width: '100%', marginTop: '1rem' }} disabled={feedbackSubmitting}>
+                {feedbackSubmitting ? 'Sending...' : 'Send Feedback'}
               </button>
             </form>
           </div>
