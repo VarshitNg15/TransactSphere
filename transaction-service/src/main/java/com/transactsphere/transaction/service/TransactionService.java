@@ -106,6 +106,15 @@ public class TransactionService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public List<TransactionResponse> getTransactionsByAccountNumber(String accountNumber) {
+        return transactionRepository.findBySourceAccountNumberInOrTargetAccountNumberInOrderByTimestampDesc(
+                List.of(accountNumber), List.of(accountNumber)
+        ).stream()
+        .map(this::mapToResponse)
+        .collect(Collectors.toList());
+    }
+
     /**
      * Gets transactions history for the logged-in user.
      */

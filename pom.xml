@@ -35,6 +35,11 @@
         <module>account-service</module>
         <module>transaction-service</module>
         <module>notification-service</module>
+        <module>fraud-service</module>
+        <module>analytics-service</module>
+        <module>audit-service</module>
+        <module>statement-service</module>
+        <module>admin-service</module>
     </modules>
 
     <dependencyManagement>
