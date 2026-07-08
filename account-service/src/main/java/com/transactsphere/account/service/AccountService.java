@@ -11,6 +11,7 @@ import com.transactsphere.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final CacheManager cacheManager;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     /**
      * Creates a new account for a user.
@@ -45,6 +47,17 @@ public class AccountService {
                 .build();
 
         Account saved = accountRepository.save(account);
+
+        try {
+            com.transactsphere.account.dto.GenericEvent event = com.transactsphere.account.dto.GenericEvent.builder()
+                    .userId(userId)
+                    .message("Your new account (" + accountNumber + ") of type " + request.getAccountType() + " has been created successfully.")
+                    .build();
+            kafkaTemplate.send("notification.generic", event);
+        } catch (Exception e) {
+            // Ignore kafka exceptions
+        }
+
         return mapToResponse(saved);
     }
 

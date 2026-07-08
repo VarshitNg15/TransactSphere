@@ -105,7 +105,7 @@ const Profile = () => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header glass-panel">
-        <h2>My Profile</h2>
+        <h2 style={{ fontFamily: 'Outfit', color: 'var(--accent)' }}>My Profile</h2>
       </div>
       
       {error && <div className="error-message">{error}</div>}
@@ -113,8 +113,8 @@ const Profile = () => {
       <div className="grid-container">
         <div className="glass-panel profile-details">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>User Details</h3>
-            <button className="auth-button" style={{ width: 'auto', padding: '5px 15px' }} onClick={() => setEditMode(!editMode)}>
+            <h3 style={{ fontFamily: 'Outfit' }}>User Details</h3>
+            <button className="auth-button" style={{ width: 'auto', padding: '5px 15px', fontFamily: 'Inter' }} onClick={() => setEditMode(!editMode)}>
               {editMode ? 'Cancel' : 'Edit Profile'}
             </button>
           </div>
@@ -130,8 +130,8 @@ const Profile = () => {
                 <input type="text" name="lastName" className="input-field" value={formData.lastName} onChange={handleChange} required />
               </div>
               <div className="form-group">
-                <label>Phone Number</label>
-                <input type="text" name="phoneNumber" className="input-field" value={formData.phoneNumber} onChange={handleChange} required />
+                <label style={{ fontFamily: 'Inter' }}>Phone Number</label>
+                <input type="text" name="phoneNumber" className="input-field" value={formData.phoneNumber} onChange={handleChange} pattern="\d{10}" title="Phone number must be exactly 10 digits" required />
               </div>
               <div className="form-group">
                 <label>Email</label>
@@ -146,7 +146,7 @@ const Profile = () => {
               </button>
             </form>
           ) : (
-            <div style={{ marginTop: '15px' }}>
+            <div style={{ marginTop: '15px', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <p><strong>Username:</strong> {profile?.username}</p>
               <p><strong>First Name:</strong> {profile?.firstName || 'N/A'}</p>
               <p><strong>Last Name:</strong> {profile?.lastName || 'N/A'}</p>
@@ -158,8 +158,8 @@ const Profile = () => {
           )}
           
           <div className="kyc-upload-section" style={{ marginTop: '30px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '15px' }}>
-            <h4>Upload KYC Document</h4>
-            <input type="file" onChange={handleFileChange} />
+            <h4 style={{ fontFamily: 'Outfit', marginBottom: '10px' }}>Upload KYC Document</h4>
+            <input type="file" onChange={handleFileChange} style={{ fontFamily: 'Inter' }} />
             <button onClick={uploadKyc} disabled={!kycFileBase64 || uploading} style={{ marginTop: '10px' }} className="auth-button">
               {uploading ? 'Uploading...' : 'Submit KYC'}
             </button>
@@ -167,9 +167,9 @@ const Profile = () => {
         </div>
 
         <div className="glass-panel accounts-list">
-          <h3>My Accounts</h3>
+          <h3 style={{ fontFamily: 'Outfit', marginBottom: '15px' }}>My Accounts</h3>
           {accounts.length > 0 ? (
-            <ul>
+            <ul style={{ fontFamily: 'Inter' }}>
               {accounts.map(acc => (
                 <li key={acc.id} style={{ marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
                   <p><strong>Type:</strong> {acc.accountType}</p>

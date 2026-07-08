@@ -75,7 +75,7 @@ const Statements = () => {
   if (loadingAccounts) return <div className="dashboard-container"><div className="loader"></div></div>;
 
   return (
-    <div className="dashboard-container" style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+    <div className="dashboard-container" style={{ display: 'flex', flexDirection: 'row', gap: '2rem', alignItems: 'flex-start' }}>
       {/* Sidebar for Accounts */}
       <div className="glass-panel" style={{ width: '320px', padding: '2rem 1.5rem', position: 'sticky', top: '2rem' }}>
         <h3 style={{ fontSize: '1.2rem', fontFamily: 'Outfit', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1.5rem' }}>Select Account</h3>

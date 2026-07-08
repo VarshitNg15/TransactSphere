@@ -8,6 +8,7 @@ import com.transactsphere.notification.dto.UserProfileResponse;
 import com.transactsphere.notification.model.NotificationLog;
 import com.transactsphere.notification.model.NotificationType;
 import com.transactsphere.notification.repository.NotificationLogRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -24,12 +25,13 @@ public class NotificationConsumer {
     private final SmsService smsService;
     private final InAppNotificationService inAppNotificationService;
     private final NotificationLogRepository notificationLogRepository;
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "transaction.completed", groupId = "notification-group")
-    public void consumeTransactionEvent(TransactionEvent event) {
-        log.info("Received transaction.completed event: {}", event.getTransactionId());
-
+    public void consumeTransactionEvent(String eventJson) {
         try {
+            TransactionEvent event = objectMapper.readValue(eventJson, TransactionEvent.class);
+            log.info("Received transaction.completed event: {}", event.getTransactionId());
             // Determine which accounts to notify
             String[] accountsToNotify;
             if ("DEPOSIT".equals(event.getTransactionType())) {
@@ -82,15 +84,15 @@ public class NotificationConsumer {
             } // Close for loop
 
         } catch (Exception e) {
-            log.error("Error processing transaction event: {}", event.getTransactionId(), e);
+            log.error("Error processing transaction event", e);
         }
     }
 
     @KafkaListener(topics = "transaction.fraudulent", groupId = "notification-group")
-    public void consumeFraudEvent(TransactionEvent event) {
-        log.warn("Received transaction.fraudulent event: {}", event.getTransactionId());
-
+    public void consumeFraudEvent(String eventJson) {
         try {
+            TransactionEvent event = objectMapper.readValue(eventJson, TransactionEvent.class);
+            log.warn("Received transaction.fraudulent event: {}", event.getTransactionId());
             // Determine which accounts to notify
             String[] accountsToNotify;
             if ("DEPOSIT".equals(event.getTransactionType())) {
@@ -144,7 +146,37 @@ public class NotificationConsumer {
             } // Close for loop
 
         } catch (Exception e) {
-            log.error("Error processing fraud event: {}", event.getTransactionId(), e);
+            log.error("Error processing fraud event", e);
+        }
+    }
+
+    @KafkaListener(topics = "notification.generic", groupId = "notification-group")
+    public void consumeGenericEvent(String eventJson) {
+        try {
+            com.transactsphere.notification.dto.GenericEvent event = objectMapper.readValue(eventJson, com.transactsphere.notification.dto.GenericEvent.class);
+            log.info("Received generic notification for user {}", event.getUserId());
+            
+            UserProfileResponse user = userClient.getUserInternal(event.getUserId());
+            if (user == null) {
+                log.error("User not found for userId: {}", event.getUserId());
+                return;
+            }
+
+            String subject = "TransactSphere Notification";
+            String message = event.getMessage();
+
+            if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                boolean emailSent = emailService.sendEmail(user.getEmail(), subject, message);
+                saveLog(user.getId(), message, NotificationType.EMAIL, emailSent ? "SENT" : "FAILED");
+            }
+            if (user.getPhoneNumber() != null && !user.getPhoneNumber().isEmpty()) {
+                boolean smsSent = smsService.sendSms(user.getPhoneNumber(), message);
+                saveLog(user.getId(), message, NotificationType.SMS, smsSent ? "SENT" : "FAILED");
+            }
+            inAppNotificationService.saveInAppNotification(user.getId(), message);
+
+        } catch (Exception e) {
+            log.error("Error processing generic event", e);
         }
     }
 

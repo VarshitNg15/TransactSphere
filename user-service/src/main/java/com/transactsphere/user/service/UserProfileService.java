@@ -6,6 +6,7 @@ import com.transactsphere.user.model.KycStatus;
 import com.transactsphere.user.model.UserProfile;
 import com.transactsphere.user.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 public class UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     /**
      * Gets profile of a user. If not found, auto-initializes it with skeleton data.
@@ -50,6 +52,10 @@ public class UserProfileService {
                         .kycStatus(KycStatus.PENDING)
                         .build());
 
+        if (request.getPhoneNumber() != null && userProfileRepository.existsByPhoneNumberAndIdNot(request.getPhoneNumber(), userId)) {
+            throw new IllegalArgumentException("Phone number is already associated with another account.");
+        }
+
         profile.setFirstName(request.getFirstName());
         profile.setLastName(request.getLastName());
         profile.setPhoneNumber(request.getPhoneNumber());
@@ -72,6 +78,17 @@ public class UserProfileService {
                 .orElseThrow(() -> new IllegalArgumentException("User profile not found with ID: " + userId));
         profile.setKycStatus(status);
         UserProfile saved = userProfileRepository.save(profile);
+
+        try {
+            com.transactsphere.user.dto.GenericEvent event = com.transactsphere.user.dto.GenericEvent.builder()
+                    .userId(userId)
+                    .message("Your KYC status has been updated to: " + status.name())
+                    .build();
+            kafkaTemplate.send("notification.generic", event);
+        } catch (Exception e) {
+            // Ignore kafka exceptions
+        }
+
         return mapToResponse(saved);
     }
 

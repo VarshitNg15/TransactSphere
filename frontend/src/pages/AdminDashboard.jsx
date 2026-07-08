@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axiosConfig';
-import { Users, MessageSquare, Shield, Lock, Eye, CheckCircle, XCircle, Activity, AlertTriangle, FileText } from 'lucide-react';
+import { Users, MessageSquare, Shield, Lock, Eye, CheckCircle, XCircle, Activity, AlertTriangle, FileText, CreditCard } from 'lucide-react';
 import './Dashboard.css';
 
 const AdminDashboard = () => {
@@ -16,6 +16,10 @@ const AdminDashboard = () => {
   // KYC Modal State
   const [kycModalOpen, setKycModalOpen] = useState(false);
   const [kycImage, setKycImage] = useState(null);
+
+  // Fund Management State
+  const [fundForm, setFundForm] = useState({ accountNumber: '', amount: '', action: 'deposit', description: 'Admin transfer' });
+  const [fundLoading, setFundLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -69,8 +73,7 @@ const AdminDashboard = () => {
     try {
       await api.put(`/auth/users/${userId}/block?block=${!isBlocked}`);
       alert(`User ${!isBlocked ? 'blocked' : 'unblocked'} successfully.`);
-      const res = await api.get('/users');
-      setUsers(res.data);
+      setUsers(users.map(u => u.id === userId ? { ...u, isBlocked: !isBlocked } : u));
     } catch (err) {
       console.error(err);
       alert('Failed to update user block status');
@@ -81,6 +84,7 @@ const AdminDashboard = () => {
     try {
       await api.put(`/accounts/user/${userId}/freeze?freeze=${!freezeStatus}`);
       alert(`User's accounts ${!freezeStatus ? 'frozen' : 'unfrozen'} successfully.`);
+      setUsers(users.map(u => u.id === userId ? { ...u, isFrozen: !freezeStatus } : u));
     } catch (err) {
       console.error(err);
       alert('Failed to update account freeze status');
@@ -109,10 +113,43 @@ const AdminDashboard = () => {
     setKycImage(null);
   };
 
+  const handleFundSubmit = async (e) => {
+    e.preventDefault();
+    if (!fundForm.accountNumber || !fundForm.amount) {
+      alert('Please fill all required fields');
+      return;
+    }
+    
+    setFundLoading(true);
+    try {
+      const payload = {
+        amount: parseFloat(fundForm.amount),
+        description: fundForm.description
+      };
+      
+      if (fundForm.action === 'deposit') {
+        payload.targetAccountNumber = fundForm.accountNumber;
+        await api.post('/transactions/deposit', payload);
+        alert('Deposit successful');
+      } else {
+        payload.sourceAccountNumber = fundForm.accountNumber;
+        await api.post('/transactions/withdraw', payload);
+        alert('Withdrawal successful');
+      }
+      
+      setFundForm({ accountNumber: '', amount: '', action: 'deposit', description: 'Admin transfer' });
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || `Failed to ${fundForm.action}`);
+    } finally {
+      setFundLoading(false);
+    }
+  };
+
   if (loading) return <div className="dashboard-container"><div className="loader"></div></div>;
 
   return (
-    <div className="dashboard-container" style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+    <div className="dashboard-container" style={{ display: 'flex', flexDirection: 'row', gap: '2rem', alignItems: 'flex-start' }}>
       
       {/* Sidebar */}
       <div className="glass-panel" style={{ width: '280px', padding: '2rem 1.5rem', position: 'sticky', top: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -122,6 +159,7 @@ const AdminDashboard = () => {
             {[
               { id: 'analytics', icon: Activity, label: 'System Analytics' },
               { id: 'customers', icon: Users, label: 'Customers & KYC' },
+              { id: 'funds', icon: CreditCard, label: 'Fund Management' },
               { id: 'fraud', icon: AlertTriangle, label: 'Fraud Alerts' },
               { id: 'audit', icon: FileText, label: 'Audit Logs' },
               { id: 'feedbacks', icon: MessageSquare, label: 'User Feedbacks' },
@@ -331,18 +369,18 @@ const AdminDashboard = () => {
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button 
-                            onClick={() => handleBlockUser(user.id, false)} 
-                            style={{ padding: '6px 10px', fontSize: '11px', background: 'rgba(245, 158, 11, 0.2)', color: 'var(--warning)', border: '1px solid var(--warning)', boxShadow: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            title="Toggle Block"
+                            onClick={() => handleBlockUser(user.id, user.isBlocked || false)} 
+                            style={{ padding: '6px 10px', fontSize: '11px', background: user.isBlocked ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: user.isBlocked ? 'var(--danger)' : 'var(--warning)', border: `1px solid ${user.isBlocked ? 'var(--danger)' : 'var(--warning)'}`, boxShadow: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title={user.isBlocked ? "Unblock User" : "Block User"}
                           >
-                            <Shield size={12} />
+                            <Shield size={12} /> {user.isBlocked ? "Unblock" : "Block"}
                           </button>
                           <button 
-                            onClick={() => handleFreezeAccounts(user.id, false)} 
-                            style={{ padding: '6px 10px', fontSize: '11px', background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', border: '1px solid #3b82f6', boxShadow: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            title="Toggle Freeze"
+                            onClick={() => handleFreezeAccounts(user.id, user.isFrozen || false)} 
+                            style={{ padding: '6px 10px', fontSize: '11px', background: user.isFrozen ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)', color: user.isFrozen ? 'var(--danger)' : '#3b82f6', border: `1px solid ${user.isFrozen ? 'var(--danger)' : '#3b82f6'}`, boxShadow: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title={user.isFrozen ? "Unfreeze Accounts" : "Freeze Accounts"}
                           >
-                            <Lock size={12} />
+                            <Lock size={12} /> {user.isFrozen ? "Unfreeze" : "Freeze"}
                           </button>
                         </div>
                       </td>
@@ -383,6 +421,70 @@ const AdminDashboard = () => {
                 <p style={{ color: 'var(--text-secondary)' }}>No feedbacks available.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'funds' && (
+          <div className="glass-panel" style={{ padding: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontFamily: 'Outfit', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <CreditCard size={24} color="var(--accent)" /> Fund Management
+            </h2>
+            <form onSubmit={handleFundSubmit} style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Account Number</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="e.g. 100012345678" 
+                  value={fundForm.accountNumber}
+                  onChange={(e) => setFundForm({...fundForm, accountNumber: e.target.value})}
+                  required 
+                />
+              </div>
+              
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Action</label>
+                <select 
+                  className="input-field" 
+                  value={fundForm.action}
+                  onChange={(e) => setFundForm({...fundForm, action: e.target.value})}
+                  style={{ appearance: 'none', background: 'var(--bg-primary)' }}
+                >
+                  <option value="deposit">Deposit to Account</option>
+                  <option value="withdraw">Withdraw from Account</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Amount (₹)</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  step="0.01" 
+                  className="input-field" 
+                  placeholder="Enter amount" 
+                  value={fundForm.amount}
+                  onChange={(e) => setFundForm({...fundForm, amount: e.target.value})}
+                  required 
+                />
+              </div>
+              
+              <div className="form-group">
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Description / Reason</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="Reason for transaction" 
+                  value={fundForm.description}
+                  onChange={(e) => setFundForm({...fundForm, description: e.target.value})}
+                  required 
+                />
+              </div>
+
+              <button type="submit" disabled={fundLoading} style={{ marginTop: '1rem' }}>
+                {fundLoading ? 'Processing...' : `Confirm ${fundForm.action === 'deposit' ? 'Deposit' : 'Withdrawal'}`}
+              </button>
+            </form>
           </div>
         )}
       </div>

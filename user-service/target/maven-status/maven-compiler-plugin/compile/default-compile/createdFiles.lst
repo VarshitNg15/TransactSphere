@@ -5,6 +5,8 @@ com\transactsphere\user\model\UserProfile.class
 com\transactsphere\user\repository\UserProfileRepository.class
 com\transactsphere\user\model\Feedback$FeedbackBuilder.class
 com\transactsphere\user\model\KycStatus.class
+com\transactsphere\user\dto\GenericEvent$GenericEventBuilder.class
+com\transactsphere\user\dto\GenericEvent.class
 com\transactsphere\user\dto\UserProfileResponse$UserProfileResponseBuilder.class
 com\transactsphere\user\UserApplication.class
 com\transactsphere\user\service\UserProfileService.class

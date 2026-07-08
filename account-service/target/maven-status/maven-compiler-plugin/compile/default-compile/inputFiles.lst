@@ -12,5 +12,6 @@ E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\accou
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\exception\GlobalExceptionHandler.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\exception\AccountFrozenException.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\controller\AccountController.java
+E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\dto\GenericEvent.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\model\AccountType.java
 E:\Project\TransactSphere\account-service\src\main\java\com\transactsphere\account\model\Account.java

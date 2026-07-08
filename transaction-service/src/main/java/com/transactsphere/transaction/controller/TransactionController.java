@@ -27,6 +27,24 @@ public class TransactionController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @PostMapping("/deposit")
+    public ResponseEntity<TransactionResponse> deposit(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Roles") String roles,
+            @Valid @RequestBody com.transactsphere.transaction.dto.DepositRequest request) {
+        TransactionResponse response = transactionService.deposit(userId, roles, request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<TransactionResponse> withdraw(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Roles") String roles,
+            @Valid @RequestBody com.transactsphere.transaction.dto.WithdrawRequest request) {
+        TransactionResponse response = transactionService.withdraw(userId, roles, request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
     @GetMapping("/my")
     public ResponseEntity<List<TransactionResponse>> getMyTransactions(
             @RequestHeader("X-User-Id") Long userId) {

@@ -8,6 +8,7 @@ import com.transactsphere.statement.model.StatementLog;
 import com.transactsphere.statement.repository.StatementLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,6 +26,7 @@ public class StatementService {
     private final TransactionClient transactionClient;
     private final AccountClient accountClient;
     private final StatementLogRepository statementLogRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public Map<String, Object> generateStatement(String accountNumber, LocalDateTime startDate, LocalDateTime endDate, Long userId) {
         log.info("Generating statement for account: {} from {} to {}", accountNumber, startDate, endDate);
@@ -80,6 +82,16 @@ public class StatementService {
                 .generatedAt(LocalDateTime.now())
                 .build();
         statementLogRepository.save(statementLog);
+
+        try {
+            com.transactsphere.statement.dto.GenericEvent event = com.transactsphere.statement.dto.GenericEvent.builder()
+                    .userId(userId)
+                    .message("A new account statement for account " + accountNumber + " has been generated.")
+                    .build();
+            kafkaTemplate.send("notification.generic", event);
+        } catch (Exception e) {
+            // Ignore kafka exceptions
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("accountNumber", accountNumber);

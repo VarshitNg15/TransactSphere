@@ -4,5 +4,6 @@ public enum TransactionChannel {
     UPI,
     NEFT,
     RTGS,
-    INTERNAL
+    INTERNAL,
+    WEB
 }

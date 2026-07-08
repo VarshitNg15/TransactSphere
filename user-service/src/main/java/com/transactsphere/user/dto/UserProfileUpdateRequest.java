@@ -2,6 +2,7 @@ package com.transactsphere.user.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -21,7 +22,7 @@ public class UserProfileUpdateRequest {
     private String lastName;
 
     @NotBlank(message = "Phone number is required")
-    @Size(max = 20, message = "Phone number cannot exceed 20 characters")
+    @Pattern(regexp = "^\\d{10}$", message = "Phone number must be exactly 10 digits")
     private String phoneNumber;
 
     @NotBlank(message = "Email is required")

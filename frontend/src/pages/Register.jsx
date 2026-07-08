@@ -56,7 +56,7 @@ const Register = () => {
           </div>
           <div className="form-group">
             <label>Phone Number</label>
-            <input type="text" name="phone" className="input-field" placeholder="e.g. +1 234 567 8900" onChange={handleChange} required />
+            <input type="text" name="phone" className="input-field" placeholder="10 digit number" pattern="\d{10}" title="Phone number must be exactly 10 digits" onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label>Password</label>
@@ -65,6 +65,8 @@ const Register = () => {
               name="password"
               className="input-field"
               placeholder="Create a strong password"
+              pattern="^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).{8,}$"
+              title="Password must be at least 8 characters long, contain an uppercase letter, lowercase letter, a digit and a special character"
               onChange={handleChange}
               required
             />

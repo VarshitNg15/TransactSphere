@@ -29,8 +29,8 @@ public class TransactionService {
     private final UserClient userClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    private static final BigDecimal MAX_LIMIT = new BigDecimal("200000.00");
     private static final BigDecimal MIN_LIMIT = new BigDecimal("1.00");
+    private static final BigDecimal MAX_LIMIT = new BigDecimal("50000.00");
     private static final String TOPIC_TRANSACTION_COMPLETED = "transaction.completed";
     private static final String TOPIC_TRANSACTION_FRAUD = "transaction.fraudulent";
 
@@ -236,6 +236,102 @@ public class TransactionService {
 
     private boolean isAdminOrEmployee(String roles) {
         return roles != null && (roles.contains("ROLE_ADMIN") || roles.contains("ROLE_EMPLOYEE"));
+    }
+
+    @Transactional
+    public TransactionResponse deposit(Long adminId, String roles, DepositRequest request) {
+        if (!isAdminOrEmployee(roles)) {
+            throw new IllegalArgumentException("Only Admin or Employee can perform deposit");
+        }
+        BigDecimal amount = request.getAmount();
+
+        if (amount.compareTo(MIN_LIMIT) < 0) {
+            throw new IllegalArgumentException("Deposit amount must be at least ₹" + MIN_LIMIT);
+        }
+
+        AccountDto targetAccount = getAndValidateAccount(request.getTargetAccountNumber());
+
+        String txId = "TXN-" + UUID.randomUUID().toString().substring(0, 13).toUpperCase();
+        Transaction transaction = Transaction.builder()
+                .transactionId(txId)
+                .targetAccountNumber(request.getTargetAccountNumber())
+                .amount(amount)
+                .transactionType(TransactionType.DEPOSIT)
+                .channel(TransactionChannel.WEB)
+                .status(TransactionStatus.PENDING)
+                .description(request.getDescription() != null ? request.getDescription() : "Admin Deposit")
+                .userId(targetAccount.getUserId())
+                .build();
+
+        transaction = transactionRepository.save(transaction);
+
+        try {
+            InternalTransferRequest transferReq = InternalTransferRequest.builder()
+                    .targetAccountNumber(request.getTargetAccountNumber())
+                    .amount(amount)
+                    .build();
+            accountClient.transferInternal(transferReq);
+
+            transaction.setStatus(TransactionStatus.COMPLETED);
+            transaction = transactionRepository.save(transaction);
+
+            publishCompletedEvent(transaction);
+            return mapToResponse(transaction);
+        } catch (Exception e) {
+            log.error("Failed to complete deposit. Error: {}", e.getMessage());
+            transaction.setStatus(TransactionStatus.FAILED);
+            transaction.setDescription((request.getDescription() != null ? request.getDescription() : "Admin Deposit") + " (Failed: " + extractErrorMessage(e) + ")");
+            transactionRepository.save(transaction);
+            throw new RuntimeException("Deposit execution failed: " + extractErrorMessage(e), e);
+        }
+    }
+
+    @Transactional
+    public TransactionResponse withdraw(Long adminId, String roles, WithdrawRequest request) {
+        if (!isAdminOrEmployee(roles)) {
+            throw new IllegalArgumentException("Only Admin or Employee can perform withdrawal");
+        }
+        BigDecimal amount = request.getAmount();
+
+        if (amount.compareTo(MIN_LIMIT) < 0) {
+            throw new IllegalArgumentException("Withdrawal amount must be at least ₹" + MIN_LIMIT);
+        }
+
+        AccountDto sourceAccount = getAndValidateAccount(request.getSourceAccountNumber());
+
+        String txId = "TXN-" + UUID.randomUUID().toString().substring(0, 13).toUpperCase();
+        Transaction transaction = Transaction.builder()
+                .transactionId(txId)
+                .sourceAccountNumber(request.getSourceAccountNumber())
+                .amount(amount)
+                .transactionType(TransactionType.WITHDRAWAL)
+                .channel(TransactionChannel.WEB)
+                .status(TransactionStatus.PENDING)
+                .description(request.getDescription() != null ? request.getDescription() : "Admin Withdrawal")
+                .userId(sourceAccount.getUserId())
+                .build();
+
+        transaction = transactionRepository.save(transaction);
+
+        try {
+            InternalTransferRequest transferReq = InternalTransferRequest.builder()
+                    .sourceAccountNumber(request.getSourceAccountNumber())
+                    .amount(amount)
+                    .build();
+            accountClient.transferInternal(transferReq);
+
+            transaction.setStatus(TransactionStatus.COMPLETED);
+            transaction = transactionRepository.save(transaction);
+
+            publishCompletedEvent(transaction);
+            return mapToResponse(transaction);
+        } catch (Exception e) {
+            log.error("Failed to complete withdrawal. Error: {}", e.getMessage());
+            transaction.setStatus(TransactionStatus.FAILED);
+            transaction.setDescription((request.getDescription() != null ? request.getDescription() : "Admin Withdrawal") + " (Failed: " + extractErrorMessage(e) + ")");
+            transactionRepository.save(transaction);
+            throw new RuntimeException("Withdrawal execution failed: " + extractErrorMessage(e), e);
+        }
     }
 
     private TransactionResponse mapToResponse(Transaction transaction) {
