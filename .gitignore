@@ -49,3 +49,7 @@ logs/
 # Node/Frontend dependencies
 node_modules/
 dist/
+
+# Generated Documentation
+implementation_plan*
+walkthrough*

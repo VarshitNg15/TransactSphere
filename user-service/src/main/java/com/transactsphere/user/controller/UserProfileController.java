@@ -22,8 +22,9 @@ public class UserProfileController {
     @GetMapping("/profile")
     public ResponseEntity<UserProfileResponse> getProfile(
             @RequestHeader("X-User-Id") Long userId,
-            @RequestHeader("X-User-Name") String username) {
-        UserProfileResponse response = userProfileService.getOrCreateProfile(userId, username);
+            @RequestHeader("X-User-Name") String username,
+            @RequestHeader(value = "X-User-Email", required = false) String email) {
+        UserProfileResponse response = userProfileService.getOrCreateProfile(userId, username, email);
         return ResponseEntity.ok(response);
     }
 

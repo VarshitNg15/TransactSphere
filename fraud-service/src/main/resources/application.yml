@@ -4,11 +4,13 @@ server:
 spring:
   application:
     name: fraud-service
+  config:
+    import: optional:file:../.env[.properties]
 
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/fraud_db
-    username: postgres
-    password: postgres
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:

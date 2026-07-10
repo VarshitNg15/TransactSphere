@@ -28,19 +28,37 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [usersRes, feedbacksRes, statsRes, fraudRes, auditRes] = await Promise.allSettled([
+      const [usersRes, feedbacksRes, statsRes, fraudRes, auditRes, authRes, accRes] = await Promise.allSettled([
         api.get('/users'),
         api.get('/users/feedback'),
         api.get('/admin/stats').catch(() => api.get('/analytics/dashboard')),
         api.get('/admin/fraud/logs').catch(() => api.get('/fraud/logs')),
-        api.get('/audit/logs')
+        api.get('/audit/logs'),
+        api.get('/auth/admin/users').catch(() => ({ data: [] })),
+        api.get('/accounts/admin/all').catch(() => ({ data: [] }))
       ]);
 
       if (usersRes.status === 'fulfilled') {
-        const sortedUsers = usersRes.value.data.sort((a, b) => {
+        let sortedUsers = usersRes.value.data.sort((a, b) => {
           if (!a.uniqueId || !b.uniqueId) return 0;
           return a.uniqueId.localeCompare(b.uniqueId);
         });
+
+        // Merge auth (isBlocked) and account (isFrozen) statuses
+        if (authRes?.status === 'fulfilled' && authRes.value?.data) {
+          const authMap = new Map(authRes.value.data.map(u => [u.id, u.isBlocked]));
+          sortedUsers = sortedUsers.map(u => ({ ...u, isBlocked: authMap.get(u.id) || false }));
+        }
+
+        if (accRes?.status === 'fulfilled' && accRes.value?.data) {
+          // A user is considered frozen if ANY of their accounts are frozen
+          const accMap = new Map();
+          accRes.value.data.forEach(acc => {
+            if (acc.frozen || acc.isFrozen) accMap.set(acc.userId, true);
+          });
+          sortedUsers = sortedUsers.map(u => ({ ...u, isFrozen: accMap.get(u.id) || false }));
+        }
+
         setUsers(sortedUsers);
       } else {
         setError('Failed to fetch some admin data. Ensure you have Admin privileges.');
@@ -183,10 +201,7 @@ const AdminDashboard = () => {
           </ul>
         </div>
         
-        <div style={{ marginTop: 'auto', padding: '1.5rem', background: 'rgba(99, 102, 241, 0.1)', borderRadius: '16px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-          <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: 'var(--accent)' }}><Shield size={16} /> System Status</h4>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>All 10 microservices are operating normally. Kafka streams active.</p>
-        </div>
+
       </div>
 
       {/* Main Content Area */}

@@ -94,7 +94,7 @@ class AuthServiceTest {
     @Test
     void login_Success() {
         when(userRepository.findByUsername(loginRequest.getUsername())).thenReturn(Optional.of(testUser));
-        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name()))
+        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name(), testUser.getEmail()))
                 .thenReturn("access_token");
         when(jwtService.generateRefreshToken(testUser.getUsername())).thenReturn("refresh_token");
 
@@ -124,7 +124,7 @@ class AuthServiceTest {
         when(jwtService.extractUsername(refreshRequest.getRefreshToken())).thenReturn("john_doe");
         when(userRepository.findByUsername("john_doe")).thenReturn(Optional.of(testUser));
         when(jwtService.isTokenValid(refreshRequest.getRefreshToken(), testUser.getUsername())).thenReturn(true);
-        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name()))
+        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name(), testUser.getEmail()))
                 .thenReturn("new_access_token");
 
         AuthResponse response = authService.refreshToken(refreshRequest);

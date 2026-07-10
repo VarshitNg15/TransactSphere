@@ -24,14 +24,14 @@ public class UserProfileService {
      * Gets profile of a user. If not found, auto-initializes it with skeleton data.
      */
     @Transactional
-    public UserProfileResponse getOrCreateProfile(Long userId, String username) {
+    public UserProfileResponse getOrCreateProfile(Long userId, String username, String email) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> {
                     UserProfile newProfile = UserProfile.builder()
                             .id(userId)
                             .uniqueId(String.format("USR-%06d", userId))
                             .username(username)
-                            .email(username + "@transactsphere.com")
+                            .email(email)
                             .kycStatus(KycStatus.PENDING)
                             .build();
                     return userProfileRepository.save(newProfile);

@@ -58,7 +58,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + request.getUsername()));
 
-        String accessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name());
+        String accessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name(), user.getEmail());
         String refreshToken = jwtService.generateRefreshToken(user.getUsername());
 
         return AuthResponse.builder()
@@ -90,7 +90,7 @@ public class AuthService {
                 throw new InvalidTokenException("Refresh token is invalid");
             }
 
-            String newAccessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name());
+            String newAccessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name(), user.getEmail());
             // Optionally, we could rotate refresh token here as well. For now, we reuse the existing one.
             return AuthResponse.builder()
                     .accessToken(newAccessToken)
@@ -138,5 +138,10 @@ public class AuthService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         user.setActive(!block);
         userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<User> getAllUsers() {
+        return userRepository.findAll();
     }
 }

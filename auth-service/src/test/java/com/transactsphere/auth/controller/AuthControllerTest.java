@@ -44,13 +44,13 @@ class AuthControllerTest {
         registerRequest = RegisterRequest.builder()
                 .username("john_doe")
                 .email("john@example.com")
-                .password("password123")
+                .password("Password123!")
                 .role(Role.CUSTOMER)
                 .build();
 
         loginRequest = LoginRequest.builder()
                 .username("john_doe")
-                .password("password123")
+                .password("Password123!")
                 .build();
 
         authResponse = AuthResponse.builder()

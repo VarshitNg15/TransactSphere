@@ -44,10 +44,11 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    public String generateToken(Long userId, String username, String role) {
+    public String generateToken(Long userId, String username, String role, String email) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("roles", "ROLE_" + role);
+        claims.put("email", email);
         return buildToken(claims, username, jwtExpiration);
     }
 

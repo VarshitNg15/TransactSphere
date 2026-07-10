@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -67,5 +68,22 @@ public class AuthController {
         Map<String, String> response = new HashMap<>();
         response.put("message", block ? "User blocked successfully" : "User unblocked successfully");
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/admin/users")
+    public ResponseEntity<List<Map<String, Object>>> getAllUsers(
+            @RequestHeader(value = "X-User-Roles", required = false) String roles) {
+        if (roles == null || !roles.contains("ROLE_ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
+        List<Map<String, Object>> userList = new java.util.ArrayList<>();
+        for (com.transactsphere.auth.model.User u : authService.getAllUsers()) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", u.getId());
+            map.put("isBlocked", !u.isActive());
+            userList.add(map);
+        }
+        return ResponseEntity.ok(userList);
     }
 }

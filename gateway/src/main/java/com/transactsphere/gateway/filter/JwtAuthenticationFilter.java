@@ -66,12 +66,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             String userId = String.valueOf(claims.get("userId"));
             String username = claims.getSubject();
             Object roles = claims.get("roles");
+            Object email = claims.get("email");
 
             // 4. Inject extracted user information into Headers for downstream services to consume
             ServerHttpRequest mutatedRequest = request.mutate()
                     .header("X-User-Id", userId)
                     .header("X-User-Name", username)
                     .header("X-User-Roles", String.valueOf(roles))
+                    .header("X-User-Email", email != null ? String.valueOf(email) : "")
                     .build();
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build());

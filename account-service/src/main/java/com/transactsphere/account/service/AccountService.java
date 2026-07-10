@@ -10,6 +10,7 @@ import com.transactsphere.account.model.Account;
 import com.transactsphere.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -85,6 +86,7 @@ public class AccountService {
     /**
      * Freezes or unfreezes an account (restricted to admin/employee).
      */
+    @CacheEvict(value = "accounts", key = "#accountNumber")
     @Transactional
     public AccountResponse setFreezeStatus(String accountNumber, boolean freeze) {
         Account account = accountRepository.findByAccountNumber(accountNumber)
@@ -92,8 +94,15 @@ public class AccountService {
         account.setFrozen(freeze);
         Account saved = accountRepository.save(account);
         
-        // Evict from cache
-        evictCache(accountNumber);
+        try {
+            com.transactsphere.account.dto.GenericEvent event = com.transactsphere.account.dto.GenericEvent.builder()
+                    .userId(account.getUserId())
+                    .message("Your account (" + accountNumber + ") has been " + (freeze ? "frozen" : "unfrozen") + ".")
+                    .build();
+            kafkaTemplate.send("notification.generic", event);
+        } catch (Exception e) {
+            // Ignore kafka exceptions
+        }
         
         return mapToResponse(saved);
     }
@@ -169,5 +178,11 @@ public class AccountService {
                 .createdAt(account.getCreatedAt())
                 .updatedAt(account.getUpdatedAt())
                 .build();
+    }
+
+    public List<AccountResponse> getAllAccounts() {
+        return accountRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 }

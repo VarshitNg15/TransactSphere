@@ -1,9 +1,10 @@
 package com.transactsphere.notification.service;
 
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,20 +16,15 @@ public class EmailService {
 
     public boolean sendEmail(String to, String subject, String text) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(text);
-            message.setFrom("no-reply@transactsphere.com");
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(text);
+            helper.setFrom("no-reply@transactsphere.com", "TransactSphere");
             mailSender.send(message);
 
-            // Send a completely separate email to the official mail ID
-            SimpleMailMessage adminMessage = new SimpleMailMessage();
-            adminMessage.setTo("admin@transactsphere.com");
-            adminMessage.setSubject("[COPY] " + subject);
-            adminMessage.setText("This is a copy of a notification sent to " + to + "\n\n" + text);
-            adminMessage.setFrom("no-reply@transactsphere.com");
-            mailSender.send(adminMessage);
+            // admin copy removed
 
             log.info("Email sent successfully to {} and admin@transactsphere.com", to);
             return true;

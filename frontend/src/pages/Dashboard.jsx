@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
-import { CreditCard, Bell, MessageSquare, Plus, PlusCircle, Activity } from 'lucide-react';
+import { CreditCard, Bell, MessageSquare, Plus, PlusCircle, Activity, Eye, EyeOff } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -9,6 +9,7 @@ const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAmount, setShowAmount] = useState(false);
   
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ subject: '', message: '' });
@@ -97,20 +98,23 @@ const Dashboard = () => {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Activity size={16} color="var(--accent)" /> Total Transaction Volume
             </p>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800, marginTop: '0.5rem' }}>
-              ₹{parseFloat(analytics.totalVolume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {showAmount ? `₹${parseFloat(analytics.totalVolume || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹****'}
+              <button onClick={() => setShowAmount(!showAmount)} style={{ background: 'transparent', border: 'none', padding: 0, color: 'var(--text-secondary)', cursor: 'pointer', boxShadow: 'none' }}>
+                {showAmount ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </h2>
           </div>
           <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)' }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Deposits</p>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--success)', marginTop: '0.5rem' }}>
-              ₹{parseFloat(analytics.depositVolume || 0).toLocaleString('en-IN')}
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--success)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {showAmount ? `₹${parseFloat(analytics.depositVolume || 0).toLocaleString('en-IN')}` : '₹****'}
             </h2>
           </div>
           <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.1)' }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textTransform: 'uppercase' }}>Withdrawals</p>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.5rem' }}>
-              ₹{parseFloat(analytics.withdrawalVolume || 0).toLocaleString('en-IN')}
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {showAmount ? `₹${parseFloat(analytics.withdrawalVolume || 0).toLocaleString('en-IN')}` : '₹****'}
             </h2>
           </div>
           <div style={{ flex: 1 }}>
@@ -144,8 +148,11 @@ const Dashboard = () => {
                 <div key={acc.accountNumber} className="account-card">
                   <div className="account-type">{acc.accountType} Account</div>
                   <div className="account-number">{acc.accountNumber}</div>
-                  <div className="account-balance">
-                    ₹{parseFloat(acc.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  <div className="account-balance" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {showAmount ? `₹${parseFloat(acc.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹****'}
+                    <button onClick={() => setShowAmount(!showAmount)} style={{ background: 'transparent', border: 'none', padding: 0, color: 'var(--text-secondary)', cursor: 'pointer', boxShadow: 'none' }}>
+                      {showAmount ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
                   {acc.frozen && <span className="status-badge fraudulent" style={{ position: 'absolute', top: '20px', right: '20px' }}>Frozen</span>}
                 </div>
