@@ -50,7 +50,8 @@ const Statements = () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    fetch(`http://localhost:8080/api/v1/statements/account/${selectedAccount}/download`, {
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+    fetch(`${baseURL}/statements/account/${selectedAccount}/download`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
