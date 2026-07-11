@@ -104,8 +104,10 @@ services:
     container_name: user-service
     environment:
       - DB_HOST=postgres
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - postgres
+      - kafka
     networks:
       - banking-network
     restart: unless-stopped
@@ -117,9 +119,11 @@ services:
     environment:
       - DB_HOST=postgres
       - REDIS_HOST=redis
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - postgres
       - redis
+      - kafka
     networks:
       - banking-network
     restart: unless-stopped
