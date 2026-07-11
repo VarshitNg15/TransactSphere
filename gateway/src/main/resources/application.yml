@@ -27,6 +27,7 @@ spring:
             allowedOrigins: 
               - "http://localhost:5173"
               - "https://transact-sphere-varshitng15s-projects.vercel.app"
+              - "https://transact-sphere.vercel.app"
             allowedMethods:
               - GET
               - POST
