@@ -60,6 +60,16 @@ services:
       - banking-network
     restart: unless-stopped
 
+  discovery-server:
+    build:
+      context: ./discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    networks:
+      - banking-network
+    restart: unless-stopped
+
   gateway:
     build:
       context: ./gateway
@@ -68,18 +78,10 @@ services:
       - "8080:8080"
     environment:
       - REDIS_HOST=redis
-      - AUTH_SERVICE_HOST=auth-service
-      - USER_SERVICE_HOST=user-service
-      - ACCOUNT_SERVICE_HOST=account-service
-      - TRANSACTION_SERVICE_HOST=transaction-service
-      - NOTIFICATION_SERVICE_HOST=notification-service
+      - EUREKA_SERVER_HOST=discovery-server
     depends_on:
       - redis
-      - auth-service
-      - user-service
-      - account-service
-      - transaction-service
-      - notification-service
+      - discovery-server
     networks:
       - banking-network
     restart: unless-stopped
@@ -91,9 +93,11 @@ services:
     environment:
       - DB_HOST=postgres
       - REDIS_HOST=redis
+      - EUREKA_SERVER_HOST=discovery-server
     depends_on:
       - postgres
       - redis
+      - discovery-server
     networks:
       - banking-network
     restart: unless-stopped
@@ -105,9 +109,11 @@ services:
     environment:
       - DB_HOST=postgres
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_SERVER_HOST=discovery-server
     depends_on:
       - postgres
       - kafka
+      - discovery-server
     networks:
       - banking-network
     restart: unless-stopped
@@ -120,10 +126,12 @@ services:
       - DB_HOST=postgres
       - REDIS_HOST=redis
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_SERVER_HOST=discovery-server
     depends_on:
       - postgres
       - redis
       - kafka
+      - discovery-server
     networks:
       - banking-network
     restart: unless-stopped
@@ -135,13 +143,11 @@ services:
     environment:
       - DB_HOST=postgres
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - ACCOUNT_SERVICE_HOST=account-service
-      - USER_SERVICE_HOST=user-service
+      - EUREKA_SERVER_HOST=discovery-server
     depends_on:
       - postgres
       - kafka
-      - account-service
-      - user-service
+      - discovery-server
     networks:
       - banking-network
     restart: unless-stopped
@@ -154,10 +160,12 @@ services:
       - DB_HOST=postgres
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - MAIL_HOST=mailhog
+      - EUREKA_SERVER_HOST=discovery-server
     depends_on:
       - postgres
       - kafka
       - mailhog
+      - discovery-server
     networks:
       - banking-network
     restart: unless-stopped

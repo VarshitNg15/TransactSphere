@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "user-service", url = "http://${USER_SERVICE_HOST:localhost}:8082")
+@FeignClient(name = "user-service")
 public interface UserClient {
     @PutMapping("/api/v1/users/{id}/kyc")
     Object updateKyc(

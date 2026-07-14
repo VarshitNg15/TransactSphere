@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@FeignClient(name = "fraud-service", url = "http://${FRAUD_SERVICE_HOST:localhost}:8086")
+@FeignClient(name = "fraud-service")
 public interface FraudClient {
     @GetMapping("/api/v1/fraud/logs")
     List<Object> getAllLogs(@RequestHeader("X-User-Roles") String roles);

@@ -3,6 +3,11 @@ server:
   tomcat:
     max-http-form-post-size: 10MB
 
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
+
 spring:
   application:
     name: gateway
@@ -26,7 +31,6 @@ spring:
           '[/**]':
             allowedOrigins: 
               - "http://localhost:5173"
-              - "https://transact-sphere-varshitng15s-projects.vercel.app"
               - "https://transact-sphere.vercel.app"
             allowedMethods:
               - GET
@@ -41,7 +45,7 @@ spring:
       routes:
         # Auth Service Route
         - id: auth-service
-          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          uri: lb://auth-service
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -53,7 +57,7 @@ spring:
 
         # User Service Route
         - id: user-service
-          uri: http://${USER_SERVICE_HOST:localhost}:8082
+          uri: lb://user-service
           predicates:
             - Path=/api/v1/users/**
           filters:
@@ -65,7 +69,7 @@ spring:
 
         # Account Service Route
         - id: account-service
-          uri: http://${ACCOUNT_SERVICE_HOST:localhost}:8083
+          uri: lb://account-service
           predicates:
             - Path=/api/v1/accounts/**
           filters:
@@ -77,7 +81,7 @@ spring:
 
         # Transaction Service Route
         - id: transaction-service
-          uri: http://${TRANSACTION_SERVICE_HOST:localhost}:8084
+          uri: lb://transaction-service
           predicates:
             - Path=/api/v1/transactions/**,/api/v1/requests/**
           filters:
@@ -89,37 +93,37 @@ spring:
 
         # Notification Service Route
         - id: notification-service
-          uri: http://${NOTIFICATION_SERVICE_HOST:localhost}:8085
+          uri: lb://notification-service
           predicates:
             - Path=/api/v1/notifications/**
 
         # Fraud Service Route
         - id: fraud-service
-          uri: http://${FRAUD_SERVICE_HOST:localhost}:8086
+          uri: lb://fraud-service
           predicates:
             - Path=/api/v1/fraud/**
 
         # Analytics Service Route
         - id: analytics-service
-          uri: http://${ANALYTICS_SERVICE_HOST:localhost}:8087
+          uri: lb://analytics-service
           predicates:
             - Path=/api/v1/analytics/**
 
         # Audit Service Route
         - id: audit-service
-          uri: http://${AUDIT_SERVICE_HOST:localhost}:8088
+          uri: lb://audit-service
           predicates:
             - Path=/api/v1/audit/**
 
         # Statement Service Route
         - id: statement-service
-          uri: http://${STATEMENT_SERVICE_HOST:localhost}:8089
+          uri: lb://statement-service
           predicates:
             - Path=/api/v1/statements/**
 
         # Admin Service Route
         - id: admin-service
-          uri: http://${ADMIN_SERVICE_HOST:localhost}:8090
+          uri: lb://admin-service
           predicates:
             - Path=/api/v1/admin/**
 

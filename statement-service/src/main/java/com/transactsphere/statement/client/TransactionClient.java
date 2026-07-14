@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(name = "transaction-service", url = "http://${TRANSACTION_SERVICE_HOST:localhost}:8084")
+@FeignClient(name = "transaction-service")
 public interface TransactionClient {
     @GetMapping("/internal/transactions/account/{accountNumber}")
     List<TransactionResponse> getTransactionsInternal(@PathVariable("accountNumber") String accountNumber);
