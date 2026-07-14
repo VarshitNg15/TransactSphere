@@ -1,18 +1,19 @@
 # TransactSphere Banking Platform
 
-TransactSphere is an enterprise-grade, event-driven microservices banking application designed for scalability, security, and high performance. It features isolated databases per service, global API routing and rate-limiting, secure JWT-based authentication, Redis caching, real-time fraud checking, asynchronous notifications.
+TransactSphere is an enterprise-grade, event-driven microservices banking application designed for scalability, security, and high performance. It features isolated databases per service, global API routing and rate-limiting, secure JWT-based authentication, Redis caching, real-time fraud checking, asynchronous notifications, and dynamic service discovery.
 
 ---
 
 ## 📖 Detailed Summary & Architecture
 
-TransactSphere is architected around the **Database-per-Service** pattern to guarantee strict service boundary isolation. Services communicate either synchronously via **Spring Cloud OpenFeign** (for immediate consistency operations like debit/credit checks) or asynchronously via **Apache Kafka** (for eventual consistency flows like triggering email/SMS alerts upon transaction completion).
+TransactSphere is architected around the **Database-per-Service** pattern to guarantee strict service boundary isolation. Services are dynamically registered and discovered using **Netflix Eureka (Discovery Server)**, enabling load balancing and dynamic routing without hardcoded URLs. They communicate either synchronously via **Spring Cloud OpenFeign** (for immediate consistency operations like debit/credit checks) or asynchronously via **Apache Kafka** (for eventual consistency flows like triggering email/SMS alerts upon transaction completion).
 
 ### Key Architectural Concepts
-1. **API Gateway Security**: All client traffic flows through the [gateway](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/gateway) module, which validates JWT tokens, resolves client IP addresses to apply granular rate-limits (using Redis), and injects verified edge headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) to downstream services.
-2. **Database Isolation**: The infrastructure initializes isolated PostgreSQL databases for each service instance (e.g., `auth_db`, `user_db`, `account_db`) rather than using a single shared database, preventing tight service coupling.
-3. **Write-Through Caching**: The [account-service](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/account-service) employs Redis to cache account balances, optimizing query speed for dashboard reads and mitigating high read loads on PostgreSQL.
-4. **Asynchronous Notification Routing**: High-latency notification delivery (Email, SMS) is decoupled from the transaction journey. The [transaction-service](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/transaction-service) publishes events to Kafka, allowing the [notification-service](file:///c:/Users/akars/Desktop/Java%20Stack/TransactSphere/TransactSphere/notification-service) to process them asynchronously.
+1. **Dynamic Service Discovery**: A central **Eureka Discovery Server** maintains a registry of all active microservice instances. The API Gateway and inter-service Feign clients seamlessly route requests to available instances.
+2. **API Gateway Security**: All client traffic flows through the `gateway` module, which validates JWT tokens, resolves client IP addresses to apply granular rate-limits (using Redis), and injects verified edge headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) to downstream services dynamically resolved via Eureka.
+3. **Database Isolation**: The infrastructure initializes isolated PostgreSQL databases for each service instance (e.g., `auth_db`, `user_db`, `account_db`) rather than using a single shared database, preventing tight service coupling.
+4. **Write-Through Caching**: The `account-service` employs Redis to cache account balances, optimizing query speed for dashboard reads and mitigating high read loads on PostgreSQL.
+5. **Asynchronous Notification Routing**: High-latency notification delivery (Email, SMS) is decoupled from the transaction journey. The `transaction-service` publishes events to Kafka, allowing the `notification-service` to process them asynchronously.
 
 ---
 
@@ -21,7 +22,7 @@ TransactSphere is architected around the **Database-per-Service** pattern to gua
 ### Backend
 - **Language**: Java 21
 - **Framework**: Spring Boot 3.2.5
-- **Microservice Integration**: Spring Cloud 2023.0.1 (Spring Cloud Gateway, OpenFeign)
+- **Microservice Integration**: Spring Cloud 2023.0.1 (Netflix Eureka, Spring Cloud Gateway, OpenFeign)
 - **Security**: Spring Security & JSON Web Tokens (JJWT 0.11.5)
 - **Data Access & Mapping**: Spring Data JPA, MapStruct 1.5.5, Lombok 1.18.32
 - **Database Driver**: PostgreSQL JDBC Driver
@@ -40,7 +41,7 @@ TransactSphere is architected around the **Database-per-Service** pattern to gua
 - **Relational Database**: PostgreSQL 15 (Alpine)
 - **Key-Value Store / Cache**: Redis 7 (Alpine)
 - **Message Broker**: Apache Kafka 3.4.0 (Bitnami KRaft mode, eliminating Zookeeper dependency)
-- **Mock Mail Server**: MailHog (SMTP server for testing e-mails)
+- **Mail Server**: MailHog (SMTP server for testing e-mails)
 
 ---
 
@@ -57,6 +58,7 @@ TransactSphere/
 │   ├── docker-compose.infra.yml      # Infrastructure service declarations (Postgres, Redis, Kafka, MailHog)
 │   └── postgres/
 │       └── init-db.sql               # PostgreSQL initial DB creations
+├── discovery-server/                 # Netflix Eureka Service Registry - Port 8761
 ├── gateway/                          # API Gateway (Spring Cloud Gateway) - Port 8080
 ├── auth-service/                     # Identity Management & JWT Generation - Port 8081
 ├── user-service/                     # User Profiles & KYC status - Port 8082
@@ -66,18 +68,21 @@ TransactSphere/
 └── frontend/                         # React / Vite Web Application - Port 5173
 ```
 
+*(Note: Other services like `admin-service`, `analytics-service`, `audit-service`, `fraud-service`, `statement-service` may be present in the repository as experimental or upcoming features).*
+
 ---
 
 ## ⚙️ Ports and Database Mapping
 
 | Service Name | Port | Database Name | Internal/External Resources Used |
 | :--- | :---: | :--- | :--- |
-| **API Gateway** | `8080` | *None* | Redis (IP-based Request Rate Limiting) |
-| **Auth Service** | `8081` | `auth_db` | PostgreSQL, Redis (JWT Blacklisting on logout) |
-| **User Service** | `8082` | `user_db` | PostgreSQL |
-| **Account Service** | `8083` | `account_db` | PostgreSQL, Redis (Balance Caching) |
-| **Transaction Service** | `8084` | `transaction_db` | PostgreSQL, OpenFeign (Account Client), Kafka (Event Producer) |
-| **Notification Service** | `8085` | `notification_db` | PostgreSQL, Kafka (Consumer), SMTP MailHog |
+| **Discovery Server** | `8761` | *None* | Netflix Eureka Service Registry |
+| **API Gateway** | `8080` | *None* | Redis (IP-based Request Rate Limiting), Eureka |
+| **Auth Service** | `8081` | `auth_db` | PostgreSQL, Redis (JWT Blacklisting), Eureka |
+| **User Service** | `8082` | `user_db` | PostgreSQL, Kafka, Eureka |
+| **Account Service** | `8083` | `account_db` | PostgreSQL, Redis (Balance Caching), Kafka, Eureka |
+| **Transaction Service** | `8084` | `transaction_db` | PostgreSQL, OpenFeign, Kafka, Eureka |
+| **Notification Service** | `8085` | `notification_db` | PostgreSQL, Kafka (Consumer), SMTP MailHog, Eureka |
 | **React Frontend** | `5173` | *None (Local Storage)*| Browser Client connecting to Gateway |
 | **PostgreSQL** | `5432` | *N/A (Multi-DB)* | Stores data for all backend services |
 | **Redis Cache** | `6379` | *N/A* | In-memory cache & session store |
@@ -89,28 +94,33 @@ TransactSphere/
 
 ## 🛡️ Core Features
 
-### 1. Secure Authentication & Session Store
+### 1. Dynamic Service Discovery
+- Centralized registry where microservices announce their presence.
+- API Gateway acts as the edge proxy mapping routes to Eureka instances.
+- Internal communication via `@FeignClient` is resolved automatically via Eureka, removing the need for static IPs.
+
+### 2. Secure Authentication & Session Store
 - Token-based stateless authentication utilizing JSON Web Tokens.
 - Automated API Gateway security filter mapping client headers.
 - **Refresh Token Rotation**: Endpoint POST `/api/v1/auth/refresh` retrieves updated short-lived access tokens.
 - **Logout Blacklisting**: Invalidates access tokens immediately on POST `/api/v1/auth/logout` by storing signatures in Redis with a TTL matching the token's lifetime.
 
-### 2. User & Profile Management
+### 3. User & Profile Management
 - Auto-initialization of user profiles upon first API call using gateway propagated details.
 - Handles user identity records, addresses, contact information, and KYC verification levels.
 
-### 3. Core Account Management
+### 4. Core Account Management
 - Savings and Current account profiles associated with client owners.
 - Automated generation of unique 12-digit account numbers (starts with branch prefix `1000`).
 - Strict balance checks, credit/debit processing, and thread-safe lock mechanisms.
 
-### 4. Real-time Fraud Detection & Verification Rules
+### 5. Real-time Fraud Detection & Verification Rules
 Before transactions are persisted or executed, the `transaction-service` evaluates three core risk conditions:
 - **Rolling 24-Hour Transaction Limits**: Restricts the maximum cumulative transactional amount across all transactions to **₹100,000** in a rolling 24-hour window.
 - **High-Frequency Transactions**: Rejects transactions if the client attempts to make more than **5 transactions** within a rolling **10-minute window**.
 - **KYC Status Validation**: For transfers and deposits, the transaction service connects to the `user-service` via a Feign client and checks the receiver's KYC status. If the recipient's KYC status is missing or not `APPROVED`, the transaction is immediately blocked and logs a `fraudReason`.
 
-### 5. Multi-channel Asynchronous Notifications
+### 6. Multi-channel Asynchronous Notifications
 When a transaction executes successfully or gets blocked due to a fraud check:
 - **Emails** are dispatched via the SMTP template engine to the recipient and sender, viewable locally via MailHog.
 - **SMS alerts** are generated and logged directly into the notification service console output (free of cost).
@@ -132,45 +142,56 @@ cp .env.example .env
 ```
 Ensure your configuration reflects local requirements. By default, the application is pre-configured to locate resources on `localhost`.
 
-### Step 2: Spin Up Infrastructure Containers
-Start the infrastructure services via Docker Compose:
+### Step 2: Spin Up Full Stack using Docker Compose
+You can run the entire infrastructure and microservices ecosystem using the provided `docker-compose.yml`:
+```bash
+docker compose up -d --build
+```
+This will start:
+- Postgres (`5432`)
+- Redis (`6379`)
+- Kafka (`9092`/`29092`)
+- MailHog (`1025`/`8025`)
+- Discovery Server (`8761`)
+- API Gateway (`8080`)
+- Auth, User, Account, Transaction, and Notification Services
+
+### Alternative: Running Microservices Manually (Backend)
+If you prefer to run services manually via Maven instead of Docker, first start the infrastructure components:
 ```bash
 docker compose -f docker/docker-compose.infra.yml up -d
 ```
-Verify that Postgres (`5432`), Redis (`6379`), Kafka (`9092`/`29092`), and MailHog (`1025`/`8025`) are healthy and bound to their ports.
+Then, start the services in individual terminals (ensure **Discovery Server** starts first):
 
-### Step 3: Build the Multi-Module Project
-Run a clean install compile inside the project root:
 ```bash
-mvn clean install -DskipTests
-```
+# 1. Start Discovery Server (Port 8761)
+cd discovery-server && mvn spring-boot:run
 
-### Step 4: Run Microservices (Backend)
-Start each service in individual terminals, or in the background:
-```bash
-# Start Auth Service (Port 8081)
-cd auth-service && mvn spring-boot:run
-
-# Start Gateway Service (Port 8080)
+# 2. Start Gateway Service (Port 8080)
 cd ../gateway && mvn spring-boot:run
 
-# Start User Service (Port 8082)
+# 3. Start Auth Service (Port 8081)
+cd ../auth-service && mvn spring-boot:run
+
+# 4. Start User Service (Port 8082)
 cd ../user-service && mvn spring-boot:run
 
-# Start Account Service (Port 8083)
+# 5. Start Account Service (Port 8083)
 cd ../account-service && mvn spring-boot:run
 
-# Start Transaction Service (Port 8084)
+# 6. Start Transaction Service (Port 8084)
 cd ../transaction-service && mvn spring-boot:run
 
-# Start Notification Service (Port 8085)
+# 7. Start Notification Service (Port 8085)
 cd ../notification-service && mvn spring-boot:run
 ```
 
-### Step 5: Start the Frontend Application
+*(Note: Wait for the Discovery Server to fully initialize before starting the other microservices so they can successfully register upon startup).*
+
+### Step 3: Start the Frontend Application
 ```bash
 # Navigate to the frontend directory
-cd ../frontend
+cd frontend
 
 # Install node dependencies
 npm install
@@ -269,6 +290,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/v1/transactions/deposit" `
 
 ### 6. Verify Events & Notification Delivery
 - **Email**: Go to the MailHog web dashboard at [http://localhost:8025](http://localhost:8025) to check the transaction email alerts.
+- **Eureka Dashboard**: Go to [http://localhost:8761](http://localhost:8761) to view all registered microservices.
 - **SMS Logs**: Check the console log of the running `notification-service` to inspect mock SMS prints.
 - **In-App Notifications**:
   ```powershell
