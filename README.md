@@ -41,7 +41,7 @@ TransactSphere is architected around the **Database-per-Service** pattern to gua
 - **Relational Database**: PostgreSQL 15 (Alpine)
 - **Key-Value Store / Cache**: Redis 7 (Alpine)
 - **Message Broker**: Apache Kafka 3.4.0 (Bitnami KRaft mode, eliminating Zookeeper dependency)
-- **Mail Server**: MailHog (SMTP server for testing e-mails)
+- **Reverse Proxy**: Nginx (handling ports 80 and 443)
 
 ---
 
@@ -55,7 +55,7 @@ TransactSphere/
 ├── .env.example                      # Shell environment config template
 ├── README.md                         # Project documentation (this file)
 ├── docker/
-│   ├── docker-compose.infra.yml      # Infrastructure service declarations (Postgres, Redis, Kafka, MailHog)
+│   ├── docker-compose.infra.yml      # Infrastructure service declarations (Postgres, Redis, Kafka, Nginx)
 │   └── postgres/
 │       └── init-db.sql               # PostgreSQL initial DB creations
 ├── discovery-server/                 # Netflix Eureka Service Registry - Port 8761
@@ -65,10 +65,13 @@ TransactSphere/
 ├── account-service/                  # Accounts & Caching - Port 8083
 ├── transaction-service/              # Transaction processing & Fraud checks - Port 8084
 ├── notification-service/             # Multi-channel notification consumers - Port 8085
+├── fraud-service/                    # Fraud Detection & Resolution - Port 8086
+├── analytics-service/                # Real-time User & Global Stats - Port 8087
+├── audit-service/                    # Global Audit Logging - Port 8088
+├── statement-service/                # Account Statement Generation - Port 8089
+├── admin-service/                    # Admin Dashboard & Approvals - Port 8090
 └── frontend/                         # React / Vite Web Application - Port 5173
 ```
-
-*(Note: Other services like `admin-service`, `analytics-service`, `audit-service`, `fraud-service`, `statement-service` may be present in the repository as experimental or upcoming features).*
 
 ---
 
@@ -83,12 +86,16 @@ TransactSphere/
 | **Account Service** | `8083` | `account_db` | PostgreSQL, Redis (Balance Caching), Kafka, Eureka |
 | **Transaction Service** | `8084` | `transaction_db` | PostgreSQL, OpenFeign, Kafka, Eureka |
 | **Notification Service** | `8085` | `notification_db` | PostgreSQL, Kafka (Consumer), SMTP MailHog, Eureka |
+| **Fraud Service** | `8086` | `fraud_db` | PostgreSQL, Kafka (Consumer), Eureka |
+| **Analytics Service** | `8087` | `analytics_db` | PostgreSQL, Kafka (Consumer), Eureka |
+| **Audit Service** | `8088` | `audit_db` | PostgreSQL, Kafka (Consumer), Eureka |
+| **Statement Service** | `8089` | `statement_db` | PostgreSQL, OpenFeign, Eureka |
+| **Admin Service** | `8090` | *None* | OpenFeign, Eureka |
 | **React Frontend** | `5173` | *None (Local Storage)*| Browser Client connecting to Gateway |
+| **Nginx Proxy** | `80` / `443` | *N/A* | Edge proxy mapping traffic to Gateway |
 | **PostgreSQL** | `5432` | *N/A (Multi-DB)* | Stores data for all backend services |
 | **Redis Cache** | `6379` | *N/A* | In-memory cache & session store |
 | **Kafka Broker** | `9092` / `29092` | *N/A* | Asynchronous communication pipeline (KRaft) |
-| **MailHog SMTP** | `1025` | *N/A* | Outgoing SMTP listener |
-| **MailHog UI** | `8025` | *N/A* | Web dashboard to inspect outgoing emails |
 
 ---
 
@@ -108,6 +115,9 @@ TransactSphere/
 ### 3. User & Profile Management
 - Auto-initialization of user profiles upon first API call using gateway propagated details.
 - Handles user identity records, addresses, contact information, and KYC verification levels.
+- **KYC Document Upload**: Secure Base64 document upload via the frontend profile page.
+- **Admin Dashboard**: Dedicated dashboard (`/admin`) for administrators to view users, inspect KYC documents, and approve/reject KYC verifications.
+- **Account Limits**: Strictly enforces one Savings and one Current account per user.
 
 ### 4. Core Account Management
 - Savings and Current account profiles associated with client owners.
@@ -122,7 +132,7 @@ Before transactions are persisted or executed, the `transaction-service` evaluat
 
 ### 6. Multi-channel Asynchronous Notifications
 When a transaction executes successfully or gets blocked due to a fraud check:
-- **Emails** are dispatched via the SMTP template engine to the recipient and sender, viewable locally via MailHog.
+- **Emails** are dispatched via the SMTP template engine to the recipient and sender using a configured SMTP server (e.g., Gmail).
 - **SMS alerts** are generated and logged directly into the notification service console output (free of cost).
 - **In-App Notifications** are written to the postgres `notification_db` and can be retrieved dynamically by calling `/api/v1/notifications` from the frontend dashboard.
 
@@ -151,7 +161,7 @@ This will start:
 - Postgres (`5432`)
 - Redis (`6379`)
 - Kafka (`9092`/`29092`)
-- MailHog (`1025`/`8025`)
+- Nginx (`80`/`443`)
 - Discovery Server (`8761`)
 - API Gateway (`8080`)
 - Auth, User, Account, Transaction, and Notification Services
@@ -184,6 +194,21 @@ cd ../transaction-service && mvn spring-boot:run
 
 # 7. Start Notification Service (Port 8085)
 cd ../notification-service && mvn spring-boot:run
+
+# 8. Start Fraud Service (Port 8086)
+cd ../fraud-service && mvn spring-boot:run
+
+# 9. Start Analytics Service (Port 8087)
+cd ../analytics-service && mvn spring-boot:run
+
+# 10. Start Audit Service (Port 8088)
+cd ../audit-service && mvn spring-boot:run
+
+# 11. Start Statement Service (Port 8089)
+cd ../statement-service && mvn spring-boot:run
+
+# 12. Start Admin Service (Port 8090)
+cd ../admin-service && mvn spring-boot:run
 ```
 
 *(Note: Wait for the Discovery Server to fully initialize before starting the other microservices so they can successfully register upon startup).*
@@ -289,7 +314,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/v1/transactions/deposit" `
 ```
 
 ### 6. Verify Events & Notification Delivery
-- **Email**: Go to the MailHog web dashboard at [http://localhost:8025](http://localhost:8025) to check the transaction email alerts.
+- **Email**: Check your configured SMTP email inbox to verify the transaction email alerts.
 - **Eureka Dashboard**: Go to [http://localhost:8761](http://localhost:8761) to view all registered microservices.
 - **SMS Logs**: Check the console log of the running `notification-service` to inspect mock SMS prints.
 - **In-App Notifications**:
