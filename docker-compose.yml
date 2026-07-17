@@ -170,15 +170,19 @@ services:
     build:
       context: ./notification-service
     container_name: notification-service
+    env_file:
+      - .env
     environment:
       - DB_HOST=postgres
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - MAIL_HOST=mailhog
+      - MAIL_HOST=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_AUTH=true
+      - MAIL_STARTTLS=true
       - EUREKA_SERVER_HOST=discovery-server
     depends_on:
       - postgres
       - kafka
-      - mailhog
       - discovery-server
     networks:
       - banking-network
