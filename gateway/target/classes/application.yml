@@ -29,9 +29,11 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: 
+            allowedOriginPatterns: 
               - "http://localhost:5173"
-              - "https://transact-sphere.vercel.app"
+              - "https://*.vercel.app"
+              - "https://*.ngrok-free.app"
+              - "https://*.ngrok.app"
             allowedMethods:
               - GET
               - POST
