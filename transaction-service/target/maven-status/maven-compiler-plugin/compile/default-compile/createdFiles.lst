@@ -1,6 +1,7 @@
 com\transactsphere\transaction\client\UserClient.class
 com\transactsphere\transaction\dto\TransferRequest.class
 com\transactsphere\transaction\dto\AccountDto.class
+com\transactsphere\transaction\model\OutboxEvent.class
 com\transactsphere\transaction\dto\CreateMoneyRequestDto.class
 com\transactsphere\transaction\dto\DepositRequest$DepositRequestBuilder.class
 com\transactsphere\transaction\model\TransactionType.class
@@ -12,6 +13,8 @@ com\transactsphere\transaction\model\TransactionChannel.class
 com\transactsphere\transaction\model\MoneyRequest$MoneyRequestBuilder.class
 com\transactsphere\transaction\dto\AccountDto$AccountDtoBuilder.class
 com\transactsphere\transaction\dto\TransactionEvent.class
+com\transactsphere\transaction\model\OutboxEvent$OutboxEventBuilder.class
+com\transactsphere\transaction\service\OutboxPublisher.class
 com\transactsphere\transaction\dto\TransferRequest$TransferRequestBuilder.class
 com\transactsphere\transaction\controller\InternalTransactionController.class
 com\transactsphere\transaction\dto\WithdrawRequest$WithdrawRequestBuilder.class
@@ -37,3 +40,4 @@ com\transactsphere\transaction\dto\TransactionEvent$TransactionEventBuilder.clas
 com\transactsphere\transaction\TransactionApplication.class
 com\transactsphere\transaction\dto\MoneyRequestDto.class
 com\transactsphere\transaction\controller\MoneyRequestController.class
+com\transactsphere\transaction\repository\OutboxEventRepository.class

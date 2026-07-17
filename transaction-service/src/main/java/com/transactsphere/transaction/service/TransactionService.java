@@ -8,7 +8,8 @@ import com.transactsphere.transaction.repository.TransactionRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.transactsphere.transaction.repository.OutboxEventRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +28,8 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountClient accountClient;
     private final UserClient userClient;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
 
     private static final BigDecimal MIN_LIMIT = new BigDecimal("1.00");
     private static final BigDecimal MAX_LIMIT = new BigDecimal("50000.00");
@@ -158,11 +160,21 @@ public class TransactionService {
                     .timestamp(transaction.getTimestamp())
                     .build();
 
-            kafkaTemplate.send(TOPIC_TRANSACTION_COMPLETED, transaction.getTransactionId(), event);
-            log.info("Successfully published transaction completed event to Kafka for transaction: {}", transaction.getTransactionId());
+            String payload = objectMapper.writeValueAsString(event);
+
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(transaction.getTransactionId())
+                    .eventType(TOPIC_TRANSACTION_COMPLETED)
+                    .payload(payload)
+                    .status("PENDING")
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            outboxEventRepository.save(outboxEvent);
+            log.info("Successfully saved transaction completed event to outbox for transaction: {}", transaction.getTransactionId());
         } catch (Exception e) {
-            // Note: In production we would write to outbox table or retry. Here we log and proceed.
-            log.error("Failed to publish transaction event to Kafka: {}", e.getMessage());
+            log.error("Failed to save transaction event to outbox: {}", e.getMessage());
+            throw new RuntimeException("Failed to save outbox event", e);
         }
     }
 
@@ -219,10 +231,21 @@ public class TransactionService {
                     .fraudReason(fraudReason)
                     .build();
 
-            kafkaTemplate.send(TOPIC_TRANSACTION_FRAUD, transaction.getTransactionId(), event);
-            log.info("Successfully published transaction fraudulent event to Kafka for transaction: {}", transaction.getTransactionId());
+            String payload = objectMapper.writeValueAsString(event);
+
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(transaction.getTransactionId())
+                    .eventType(TOPIC_TRANSACTION_FRAUD)
+                    .payload(payload)
+                    .status("PENDING")
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            outboxEventRepository.save(outboxEvent);
+            log.info("Successfully saved transaction fraudulent event to outbox for transaction: {}", transaction.getTransactionId());
         } catch (Exception e) {
-            log.error("Failed to publish transaction fraudulent event to Kafka: {}", e.getMessage());
+            log.error("Failed to save transaction fraudulent event to outbox: {}", e.getMessage());
+            throw new RuntimeException("Failed to save outbox event", e);
         }
     }
 
