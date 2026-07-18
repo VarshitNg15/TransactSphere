@@ -15,6 +15,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.PessimisticLockingFailureException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -109,44 +113,68 @@ public class AccountService {
 
     /**
      * Executes an internal transfer (debit, credit, or both).
+     * Retries on lock acquisition failure.
      */
+    @Retryable(
+            retryFor = {CannotAcquireLockException.class, PessimisticLockingFailureException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 500)
+    )
     @Transactional
     public void executeTransfer(InternalTransferRequest request) {
         BigDecimal amount = request.getAmount();
 
-        // 1. Debit operation (if sourceAccountNumber is present)
-        if (request.getSourceAccountNumber() != null && !request.getSourceAccountNumber().trim().isEmpty()) {
-            String sourceNo = request.getSourceAccountNumber().trim();
-            Account sourceAccount = accountRepository.findByAccountNumber(sourceNo)
-                    .orElseThrow(() -> new AccountNotFoundException("Source account not found: " + sourceNo));
+        String sourceNo = request.getSourceAccountNumber() != null && !request.getSourceAccountNumber().trim().isEmpty() ? request.getSourceAccountNumber().trim() : null;
+        String targetNo = request.getTargetAccountNumber() != null && !request.getTargetAccountNumber().trim().isEmpty() ? request.getTargetAccountNumber().trim() : null;
 
+        Account sourceAccount = null;
+        Account targetAccount = null;
+
+        // Prevent deadlocks by always locking accounts in a consistent order
+        if (sourceNo != null && targetNo != null) {
+            if (sourceNo.compareTo(targetNo) < 0) {
+                sourceAccount = getAccountForUpdate(sourceNo, "Source");
+                targetAccount = getAccountForUpdate(targetNo, "Target");
+            } else if (sourceNo.compareTo(targetNo) > 0) {
+                targetAccount = getAccountForUpdate(targetNo, "Target");
+                sourceAccount = getAccountForUpdate(sourceNo, "Source");
+            } else {
+                sourceAccount = getAccountForUpdate(sourceNo, "Source");
+                targetAccount = sourceAccount;
+            }
+        } else if (sourceNo != null) {
+            sourceAccount = getAccountForUpdate(sourceNo, "Source");
+        } else if (targetNo != null) {
+            targetAccount = getAccountForUpdate(targetNo, "Target");
+        }
+
+        // 1. Debit operation
+        if (sourceAccount != null) {
             if (sourceAccount.isFrozen()) {
                 throw new AccountFrozenException("Source account is frozen: " + sourceNo);
             }
-
             if (sourceAccount.getBalance().compareTo(amount) < 0) {
                 throw new InsufficientBalanceException("Insufficient balance in source account: " + sourceNo);
             }
-
             sourceAccount.setBalance(sourceAccount.getBalance().subtract(amount));
             accountRepository.save(sourceAccount);
             evictCache(sourceNo);
         }
 
-        // 2. Credit operation (if targetAccountNumber is present)
-        if (request.getTargetAccountNumber() != null && !request.getTargetAccountNumber().trim().isEmpty()) {
-            String targetNo = request.getTargetAccountNumber().trim();
-            Account targetAccount = accountRepository.findByAccountNumber(targetNo)
-                    .orElseThrow(() -> new AccountNotFoundException("Target account not found: " + targetNo));
-
+        // 2. Credit operation
+        if (targetAccount != null && targetAccount != sourceAccount) {
             if (targetAccount.isFrozen()) {
                 throw new AccountFrozenException("Target account is frozen: " + targetNo);
             }
-
             targetAccount.setBalance(targetAccount.getBalance().add(amount));
             accountRepository.save(targetAccount);
             evictCache(targetNo);
         }
+    }
+
+    private Account getAccountForUpdate(String accountNumber, String type) {
+        return accountRepository.findByAccountNumberForUpdate(accountNumber)
+                .orElseThrow(() -> new AccountNotFoundException(type + " account not found: " + accountNumber));
     }
 
     /**
