@@ -10,12 +10,17 @@ import com.transactsphere.account.model.Account;
 import com.transactsphere.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.transactsphere.account.dto.AccountUpdatedEvent;
+import com.transactsphere.account.model.OutboxEvent;
+import com.transactsphere.account.repository.OutboxEventRepository;
+import java.time.LocalDateTime;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -29,8 +34,9 @@ import java.util.stream.Collectors;
 public class AccountService {
 
     private final AccountRepository accountRepository;
-    private final CacheManager cacheManager;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * Creates a new account for a user.
@@ -90,13 +96,13 @@ public class AccountService {
     /**
      * Freezes or unfreezes an account (restricted to admin/employee).
      */
-    @CacheEvict(value = "accounts", key = "#accountNumber")
     @Transactional
     public AccountResponse setFreezeStatus(String accountNumber, boolean freeze) {
         Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountNumber));
         account.setFrozen(freeze);
         Account saved = accountRepository.save(account);
+        publishCacheEvictEvent(accountNumber, "FREEZE_STATUS_CHANGE");
         
         try {
             com.transactsphere.account.dto.GenericEvent event = com.transactsphere.account.dto.GenericEvent.builder()
@@ -158,7 +164,7 @@ public class AccountService {
             }
             sourceAccount.setBalance(sourceAccount.getBalance().subtract(amount));
             accountRepository.save(sourceAccount);
-            evictCache(sourceNo);
+            publishCacheEvictEvent(sourceNo, "BALANCE_UPDATE");
         }
 
         // 2. Credit operation
@@ -168,7 +174,7 @@ public class AccountService {
             }
             targetAccount.setBalance(targetAccount.getBalance().add(amount));
             accountRepository.save(targetAccount);
-            evictCache(targetNo);
+            publishCacheEvictEvent(targetNo, "BALANCE_UPDATE");
         }
     }
 
@@ -178,11 +184,26 @@ public class AccountService {
     }
 
     /**
-     * Evicts an account from Redis cache programmatically.
+     * Saves an event to the outbox for background cache eviction.
      */
-    private void evictCache(String accountNumber) {
-        if (cacheManager.getCache("accounts") != null) {
-            cacheManager.getCache("accounts").evict(accountNumber);
+    private void publishCacheEvictEvent(String accountNumber, String action) {
+        try {
+            AccountUpdatedEvent payload = AccountUpdatedEvent.builder()
+                    .accountNumber(accountNumber)
+                    .action(action)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(accountNumber)
+                    .eventType("account.updated")
+                    .payload(objectMapper.writeValueAsString(payload))
+                    .status("PENDING")
+                    .build();
+            
+            outboxEventRepository.save(outboxEvent);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save outbox event for cache eviction", e);
         }
     }
 
