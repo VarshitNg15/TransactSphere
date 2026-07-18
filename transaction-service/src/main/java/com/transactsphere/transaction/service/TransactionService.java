@@ -83,15 +83,32 @@ public class TransactionService {
             throw new RuntimeException("Transfer blocked due to suspected fraud.");
         }
 
+        // 1. Debit Step
         try {
-            // Execute internal balance updates
-            InternalTransferRequest transferReq = InternalTransferRequest.builder()
+            InternalTransferRequest debitReq = InternalTransferRequest.builder()
                     .sourceAccountNumber(request.getSourceAccountNumber())
+                    .amount(amount)
+                    .build();
+            accountClient.transferInternal(debitReq);
+            log.info("Debit successful for transaction: {}", transaction.getTransactionId());
+        } catch (Exception debitEx) {
+            log.error("Failed to complete debit step. Error: {}", debitEx.getMessage());
+            transaction.setStatus(TransactionStatus.FAILED);
+            transaction.setDescription(request.getDescription() + " (Debit Failed: " + extractErrorMessage(debitEx) + ")");
+            transactionRepository.save(transaction);
+            return mapToResponse(transaction);
+        }
+
+        // 2. Credit Step
+        try {
+            InternalTransferRequest creditReq = InternalTransferRequest.builder()
                     .targetAccountNumber(request.getTargetAccountNumber())
                     .amount(amount)
                     .build();
-            accountClient.transferInternal(transferReq);
-
+            accountClient.transferInternal(creditReq);
+            log.info("Credit successful for transaction: {}", transaction.getTransactionId());
+            
+            // 3. Ledger Update
             transaction.setStatus(TransactionStatus.COMPLETED);
             transaction = transactionRepository.save(transaction);
 
@@ -99,12 +116,25 @@ public class TransactionService {
             publishCompletedEvent(transaction);
 
             return mapToResponse(transaction);
-        } catch (Exception e) {
-            log.error("Failed to complete transfer. Error: {}", e.getMessage());
+        } catch (Exception creditEx) {
+            log.error("Credit failed. Initiating compensating transaction (Refund Debit). Error: {}", creditEx.getMessage());
+            
+            // 4. Compensating Transaction (Refund Debit)
+            try {
+                InternalTransferRequest refundReq = InternalTransferRequest.builder()
+                        .targetAccountNumber(request.getSourceAccountNumber()) // Crediting the source account
+                        .amount(amount)
+                        .build();
+                accountClient.transferInternal(refundReq);
+                log.info("Compensating transaction successful. Refunded {} to {}", amount, request.getSourceAccountNumber());
+            } catch (Exception refundEx) {
+                log.error("CRITICAL: Compensating transaction failed for transaction {}. Manual intervention required. Error: {}", transaction.getTransactionId(), refundEx.getMessage());
+            }
+
             transaction.setStatus(TransactionStatus.FAILED);
-            transaction.setDescription(request.getDescription() + " (Failed: " + extractErrorMessage(e) + ")");
+            transaction.setDescription(request.getDescription() + " (Credit Failed, Refunded: " + extractErrorMessage(creditEx) + ")");
             transactionRepository.save(transaction);
-            throw new RuntimeException("Transfer execution failed: " + extractErrorMessage(e), e);
+            return mapToResponse(transaction);
         }
     }
 
@@ -138,9 +168,7 @@ public class TransactionService {
             if (account == null) {
                 throw new IllegalArgumentException("Account not found: " + accountNumber);
             }
-            if (account.isFrozen()) {
-                throw new IllegalArgumentException("Account is frozen: " + accountNumber);
-            }
+            // Removed eager isFrozen() check to allow the Saga to demonstrate compensating transactions
             return account;
         } catch (FeignException.NotFound e) {
             throw new IllegalArgumentException("Account not found: " + accountNumber);
