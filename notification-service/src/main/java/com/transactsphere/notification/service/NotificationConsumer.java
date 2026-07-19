@@ -7,7 +7,9 @@ import com.transactsphere.notification.dto.TransactionEvent;
 import com.transactsphere.notification.dto.UserProfileResponse;
 import com.transactsphere.notification.model.NotificationLog;
 import com.transactsphere.notification.model.NotificationType;
+import com.transactsphere.notification.model.ProcessedEvent;
 import com.transactsphere.notification.repository.NotificationLogRepository;
+import com.transactsphere.notification.repository.ProcessedEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,12 +27,18 @@ public class NotificationConsumer {
     private final SmsService smsService;
     private final InAppNotificationService inAppNotificationService;
     private final NotificationLogRepository notificationLogRepository;
+    private final ProcessedEventRepository processedEventRepository;
     private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "transaction.completed", groupId = "notification-group")
     public void consumeTransactionEvent(String eventJson) {
         try {
             TransactionEvent event = objectMapper.readValue(eventJson, TransactionEvent.class);
+            String eventId = "transaction.completed:" + event.getTransactionId();
+            if (processedEventRepository.findById(eventId).isPresent()) {
+                log.info("Event {} already processed. Skipping.", eventId);
+                return;
+            }
             log.info("Received transaction.completed event: {}", event.getTransactionId());
             // Determine which accounts to notify
             String[] accountsToNotify;
@@ -83,6 +91,11 @@ public class NotificationConsumer {
 
             } // Close for loop
 
+            processedEventRepository.save(ProcessedEvent.builder()
+                    .eventId(eventId)
+                    .status("COMPLETED")
+                    .build());
+
         } catch (Exception e) {
             log.error("Error processing transaction event", e);
         }
@@ -92,6 +105,11 @@ public class NotificationConsumer {
     public void consumeFraudEvent(String eventJson) {
         try {
             TransactionEvent event = objectMapper.readValue(eventJson, TransactionEvent.class);
+            String eventId = "transaction.fraudulent:" + event.getTransactionId();
+            if (processedEventRepository.findById(eventId).isPresent()) {
+                log.info("Event {} already processed. Skipping.", eventId);
+                return;
+            }
             log.warn("Received transaction.fraudulent event: {}", event.getTransactionId());
             // Determine which accounts to notify
             String[] accountsToNotify;
@@ -145,6 +163,11 @@ public class NotificationConsumer {
 
             } // Close for loop
 
+            processedEventRepository.save(ProcessedEvent.builder()
+                    .eventId(eventId)
+                    .status("COMPLETED")
+                    .build());
+
         } catch (Exception e) {
             log.error("Error processing fraud event", e);
         }
@@ -154,6 +177,11 @@ public class NotificationConsumer {
     public void consumeGenericEvent(String eventJson) {
         try {
             com.transactsphere.notification.dto.GenericEvent event = objectMapper.readValue(eventJson, com.transactsphere.notification.dto.GenericEvent.class);
+            String eventId = "notification.generic:" + event.getUserId() + ":" + Math.abs(event.getMessage().hashCode());
+            if (processedEventRepository.findById(eventId).isPresent()) {
+                log.info("Event {} already processed. Skipping.", eventId);
+                return;
+            }
             log.info("Received generic notification for user {}", event.getUserId());
             
             UserProfileResponse user = userClient.getUserInternal(event.getUserId());
@@ -174,6 +202,11 @@ public class NotificationConsumer {
                 saveLog(user.getId(), message, NotificationType.SMS, smsSent ? "SENT" : "FAILED");
             }
             inAppNotificationService.saveInAppNotification(user.getId(), message);
+
+            processedEventRepository.save(ProcessedEvent.builder()
+                    .eventId(eventId)
+                    .status("COMPLETED")
+                    .build());
 
         } catch (Exception e) {
             log.error("Error processing generic event", e);
