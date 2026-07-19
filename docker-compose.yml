@@ -185,6 +185,90 @@ services:
       - banking-network
     restart: unless-stopped
 
+  # fraud-service:
+  #   build:
+  #     context: ./fraud-service
+  #   container_name: fraud-service
+  #   ports:
+  #     - "8086:8086"
+  #   environment:
+  #     - DB_HOST=postgres
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  #     - EUREKA_SERVER_HOST=discovery-server
+  #   depends_on:
+  #     - postgres
+  #     - kafka
+  #     - discovery-server
+  #   networks:
+  #     - banking-network
+  #   restart: unless-stopped
+
+  # analytics-service:
+  #   build:
+  #     context: ./analytics-service
+  #   container_name: analytics-service
+  #   ports:
+  #     - "8087:8087"
+  #   environment:
+  #     - DB_HOST=postgres
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  #     - EUREKA_SERVER_HOST=discovery-server
+  #   depends_on:
+  #     - postgres
+  #     - kafka
+  #     - discovery-server
+  #   networks:
+  #     - banking-network
+  #   restart: unless-stopped
+
+  # audit-service:
+  #   build:
+  #     context: ./audit-service
+  #   container_name: audit-service
+  #   ports:
+  #     - "8088:8088"
+  #   environment:
+  #     - DB_HOST=postgres
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  #     - EUREKA_SERVER_HOST=discovery-server
+  #   depends_on:
+  #     - postgres
+  #     - kafka
+  #     - discovery-server
+  #   networks:
+  #     - banking-network
+  #   restart: unless-stopped
+
+  # statement-service:
+  #   build:
+  #     context: ./statement-service
+  #   container_name: statement-service
+  #   ports:
+  #     - "8089:8089"
+  #   environment:
+  #     - DB_HOST=postgres
+  #     - EUREKA_SERVER_HOST=discovery-server
+  #   depends_on:
+  #     - postgres
+  #     - discovery-server
+  #   networks:
+  #     - banking-network
+  #   restart: unless-stopped
+
+  # admin-service:
+  #   build:
+  #     context: ./admin-service
+  #   container_name: admin-service
+  #   ports:
+  #     - "8090:8090"
+  #   environment:
+  #     - EUREKA_SERVER_HOST=discovery-server
+  #   depends_on:
+  #     - discovery-server
+  #   networks:
+  #     - banking-network
+  #   restart: unless-stopped
+
 networks:
   banking-network:
     driver: bridge
