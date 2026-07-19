@@ -37,6 +37,7 @@ public class AccountService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final com.transactsphere.account.cache.AntiStampedeCache antiStampedeCache;
 
     /**
      * Creates a new account for a user.
@@ -83,14 +84,15 @@ public class AccountService {
     }
 
     /**
-     * Gets details of an account. Caches the result in Redis.
+     * Gets details of an account. Uses anti-stampede probabilistic caching.
      */
-    @Cacheable(value = "accounts", key = "#accountNumber")
-    @Transactional(readOnly = true)
     public AccountResponse getAccountByAccountNumber(String accountNumber) {
-        Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountNumber));
-        return mapToResponse(account);
+        String cacheKey = "accounts::" + accountNumber;
+        return antiStampedeCache.get(cacheKey, 60000L, () -> { // 60s TTL
+            Account account = accountRepository.findByAccountNumber(accountNumber)
+                    .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountNumber));
+            return mapToResponse(account);
+        });
     }
 
     /**

@@ -15,7 +15,9 @@ com\transactsphere\account\model\Account$AccountBuilder.class
 com\transactsphere\account\dto\InternalTransferRequest.class
 com\transactsphere\account\dto\InternalTransferRequest$InternalTransferRequestBuilder.class
 com\transactsphere\account\AccountApplication.class
+com\transactsphere\account\cache\AntiStampedeCache$CacheEntry.class
 com\transactsphere\account\config\RedisConfig.class
+com\transactsphere\account\cache\AntiStampedeCache.class
 com\transactsphere\account\service\AccountEventConsumer.class
 com\transactsphere\account\model\OutboxEvent$OutboxEventBuilder.class
 com\transactsphere\account\service\OutboxPublisher.class

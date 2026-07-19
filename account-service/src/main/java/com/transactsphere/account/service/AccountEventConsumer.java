@@ -15,6 +15,7 @@ public class AccountEventConsumer {
 
     private final CacheManager cacheManager;
     private final ObjectMapper objectMapper;
+    private final com.transactsphere.account.cache.AntiStampedeCache antiStampedeCache;
 
     @KafkaListener(topics = "account.updated", groupId = "${spring.kafka.consumer.group-id:account-service}")
     public void consumeAccountUpdatedEvent(String message) {
@@ -27,6 +28,9 @@ public class AccountEventConsumer {
             if (cacheManager.getCache("accounts") != null) {
                 cacheManager.getCache("accounts").evict(accountNumber);
             }
+            
+            // Evict from new anti-stampede cache
+            antiStampedeCache.evict("accounts::" + accountNumber);
             
             log.info("Successfully evicted cache for account {}", accountNumber);
         } catch (Exception e) {

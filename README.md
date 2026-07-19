@@ -12,7 +12,7 @@ TransactSphere is architected around the **Database-per-Service** pattern to gua
 1. **Dynamic Service Discovery**: A central **Eureka Discovery Server** maintains a registry of all active microservice instances. The API Gateway and inter-service Feign clients seamlessly route requests to available instances.
 2. **API Gateway Security**: All client traffic flows through the `gateway` module, which validates JWT tokens, resolves client IP addresses to apply granular rate-limits (using Redis), and injects verified edge headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) to downstream services dynamically resolved via Eureka.
 3. **Database Isolation**: The infrastructure initializes isolated PostgreSQL databases for each service instance (e.g., `auth_db`, `user_db`, `account_db`) rather than using a single shared database, preventing tight service coupling.
-4. **Write-Through Caching**: The `account-service` employs Redis to cache account balances, optimizing query speed for dashboard reads and mitigating high read loads on PostgreSQL.
+4. **Anti-Stampede Caching Strategy**: The `account-service` employs an advanced caching system utilizing **Probabilistic Early Expiration (XFetch)** and **SingleFlight**. This completely eliminates cache misses for hot keys, ensures zero wait times for end-users during refreshes, and prevents database stampedes.
 5. **Asynchronous Notification Routing**: High-latency notification delivery (Email, SMS) is decoupled from the transaction journey. The `transaction-service` publishes events to Kafka, allowing the `notification-service` to process them asynchronously.
 
 ---
@@ -135,6 +135,18 @@ When a transaction executes successfully or gets blocked due to a fraud check:
 - **Emails** are dispatched via the SMTP template engine to the recipient and sender using a configured SMTP server (e.g., Gmail).
 - **SMS alerts** are generated and logged directly into the notification service console output (free of cost).
 - **In-App Notifications** are written to the postgres `notification_db` and can be retrieved dynamically by calling `/api/v1/notifications` from the frontend dashboard.
+
+### 7. Transactional Outbox Pattern
+To solve the dual-write problem (e.g. saving to the database and publishing to Kafka atomically), the `transaction-service` utilizes the **Transactional Outbox Pattern**.
+- Transactions and their corresponding events (`OutboxEvent`) are saved atomically to PostgreSQL.
+- A background `@Scheduled` publisher polls the `outbox_events` table and guarantees at-least-once delivery to Kafka, ensuring zero event loss even during broker outages.
+
+### 8. Analytics & Global Auditing
+- **Analytics Service**: Consumes completed transactions to generate real-time metrics, user-level statistics, and global dashboards.
+- **Audit Service**: Automatically listens to all critical Kafka topics (`transaction.completed`, `transaction.fraudulent`) to maintain a tamper-proof, centralized audit log of all financial activities across the platform.
+
+### 9. Automated Account Statements
+- The **Statement Service** enables users to generate on-demand JSON summaries and downloadable reports (CSV/HTML) for their accounts by dynamically fetching cross-service data over OpenFeign.
 
 ---
 
