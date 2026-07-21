@@ -129,13 +129,14 @@ class AuthControllerTest {
 
     @Test
     void logout_Success() throws Exception {
-        doNothing().when(authService).logout(anyString());
+        doNothing().when(authService).logout(anyString(), nullable(String.class));
 
         mockMvc.perform(post("/api/v1/auth/logout")
-                        .header("Authorization", "Bearer access_token"))
+                        .header("Authorization", "Bearer access_token")
+                        .header("X-User-Name", "john_doe"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Logged out successfully"));
 
-        verify(authService, times(1)).logout(eq("Bearer access_token"));
+        verify(authService, times(1)).logout(eq("Bearer access_token"), eq("john_doe"));
     }
 }

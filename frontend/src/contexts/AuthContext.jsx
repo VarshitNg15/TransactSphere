@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import api from '../api/axiosConfig';
 
 const AuthContext = createContext();
 
@@ -25,11 +26,19 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(true);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    setToken(null);
-    setIsAuthenticated(false);
+  const logout = async () => {
+    try {
+      if (token) {
+        await api.post('/auth/logout');
+      }
+    } catch (e) {
+      console.error("Logout API call failed", e);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      setToken(null);
+      setIsAuthenticated(false);
+    }
   };
 
   const isAdmin = localStorage.getItem('role') === 'ADMIN';

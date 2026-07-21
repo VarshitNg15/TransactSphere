@@ -41,11 +41,18 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
-        authService.logout(authHeader);
+    public ResponseEntity<Map<String, String>> logout(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
+            @RequestHeader(value = "X-User-Name", required = false) String username) {
+        authService.logout(authHeader, username);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Logged out successfully");
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/validate-version")
+    public ResponseEntity<Boolean> validateVersion(@RequestParam String username, @RequestParam Integer version) {
+        return ResponseEntity.ok(authService.validateTokenVersion(username, version));
     }
 
     @PostMapping("/forgot-password")

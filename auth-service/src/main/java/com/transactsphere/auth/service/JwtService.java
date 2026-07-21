@@ -39,21 +39,28 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Integer extractTokenVersion(String token) {
+        return extractClaim(token, claims -> claims.get("tokenVersion", Integer.class));
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
-    public String generateToken(Long userId, String username, String role, String email) {
+    public String generateToken(Long userId, String username, String role, String email, Integer tokenVersion) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("roles", "ROLE_" + role);
         claims.put("email", email);
+        claims.put("tokenVersion", tokenVersion);
         return buildToken(claims, username, jwtExpiration);
     }
 
-    public String generateRefreshToken(String username) {
-        return buildToken(new HashMap<>(), username, refreshExpiration);
+    public String generateRefreshToken(String username, Integer tokenVersion) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tokenVersion", tokenVersion);
+        return buildToken(claims, username, refreshExpiration);
     }
 
     private String buildToken(Map<String, Object> extraClaims, String username, long expiration) {

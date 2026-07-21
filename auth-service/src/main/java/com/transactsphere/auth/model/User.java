@@ -41,6 +41,10 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Builder.Default
+    @Column(name = "token_version")
+    private Integer tokenVersion = 1;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

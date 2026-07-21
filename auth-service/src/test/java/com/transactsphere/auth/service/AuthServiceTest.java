@@ -66,6 +66,7 @@ class AuthServiceTest {
                 .password("encoded_password")
                 .role(Role.CUSTOMER)
                 .isActive(true)
+                .tokenVersion(1)
                 .build();
     }
 
@@ -94,9 +95,9 @@ class AuthServiceTest {
     @Test
     void login_Success() {
         when(userRepository.findByUsername(loginRequest.getUsername())).thenReturn(Optional.of(testUser));
-        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name(), testUser.getEmail()))
+        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name(), testUser.getEmail(), testUser.getTokenVersion()))
                 .thenReturn("access_token");
-        when(jwtService.generateRefreshToken(testUser.getUsername())).thenReturn("refresh_token");
+        when(jwtService.generateRefreshToken(testUser.getUsername(), testUser.getTokenVersion())).thenReturn("refresh_token");
 
         AuthResponse response = authService.login(loginRequest);
 
@@ -124,7 +125,8 @@ class AuthServiceTest {
         when(jwtService.extractUsername(refreshRequest.getRefreshToken())).thenReturn("john_doe");
         when(userRepository.findByUsername("john_doe")).thenReturn(Optional.of(testUser));
         when(jwtService.isTokenValid(refreshRequest.getRefreshToken(), testUser.getUsername())).thenReturn(true);
-        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name(), testUser.getEmail()))
+        when(jwtService.extractTokenVersion(refreshRequest.getRefreshToken())).thenReturn(1);
+        when(jwtService.generateToken(testUser.getId(), testUser.getUsername(), testUser.getRole().name(), testUser.getEmail(), testUser.getTokenVersion()))
                 .thenReturn("new_access_token");
 
         AuthResponse response = authService.refreshToken(refreshRequest);

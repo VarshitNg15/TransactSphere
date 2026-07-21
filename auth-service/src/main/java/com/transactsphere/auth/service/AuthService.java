@@ -58,8 +58,9 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + request.getUsername()));
 
-        String accessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name(), user.getEmail());
-        String refreshToken = jwtService.generateRefreshToken(user.getUsername());
+        Integer currentTokenVersion = user.getTokenVersion() != null ? user.getTokenVersion() : 1;
+        String accessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name(), user.getEmail(), currentTokenVersion);
+        String refreshToken = jwtService.generateRefreshToken(user.getUsername(), currentTokenVersion);
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
@@ -89,8 +90,14 @@ public class AuthService {
             if (!jwtService.isTokenValid(refreshToken, user.getUsername())) {
                 throw new InvalidTokenException("Refresh token is invalid");
             }
+            
+            Integer tokenVersion = jwtService.extractTokenVersion(refreshToken);
+            Integer expectedVersion = user.getTokenVersion() != null ? user.getTokenVersion() : 1;
+            if (tokenVersion == null || !tokenVersion.equals(expectedVersion)) {
+                throw new InvalidTokenException("Refresh token version mismatch");
+            }
 
-            String newAccessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name(), user.getEmail());
+            String newAccessToken = jwtService.generateToken(user.getId(), user.getUsername(), user.getRole().name(), user.getEmail(), expectedVersion);
             // Optionally, we could rotate refresh token here as well. For now, we reuse the existing one.
             return AuthResponse.builder()
                     .accessToken(newAccessToken)
@@ -107,13 +114,31 @@ public class AuthService {
     }
 
     /**
-     * Blacklists an access token to terminate session instantly.
+     * Blacklists an access token to terminate session instantly, and increments user token version.
      */
-    public void logout(String authHeader) {
+    @Transactional
+    public void logout(String authHeader, String username) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             jwtService.blacklistToken(token);
         }
+        if (username != null) {
+            userRepository.findByUsername(username).ifPresent(user -> {
+                int currentVersion = user.getTokenVersion() != null ? user.getTokenVersion() : 1;
+                user.setTokenVersion(currentVersion + 1);
+                userRepository.save(user);
+            });
+        }
+    }
+    
+    @Transactional(readOnly = true)
+    public boolean validateTokenVersion(String username, Integer version) {
+        return userRepository.findByUsername(username)
+                .map(u -> {
+                    Integer currentVersion = u.getTokenVersion() != null ? u.getTokenVersion() : 1;
+                    return currentVersion.equals(version);
+                })
+                .orElse(false);
     }
 
     /**

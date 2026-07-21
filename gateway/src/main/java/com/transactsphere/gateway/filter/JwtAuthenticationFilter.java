@@ -25,6 +25,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder;
+
     // List of prefixes that are public and bypass JWT validation
     private static final List<String> PUBLIC_ENDPOINTS = List.of(
             "/api/v1/auth/register",
@@ -43,6 +46,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         // 1. Skip validation if the path is registered as public
         boolean isPublic = PUBLIC_ENDPOINTS.stream().anyMatch(path::startsWith);
         if (isPublic) {
+            return chain.filter(exchange);
+        }
+
+        // 1.5 Skip validation for CORS preflight (OPTIONS) requests
+        if (request.getMethod().name().equalsIgnoreCase("OPTIONS")) {
             return chain.filter(exchange);
         }
 
@@ -67,6 +75,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             String username = claims.getSubject();
             Object roles = claims.get("roles");
             Object email = claims.get("email");
+            Integer tokenVersion = claims.get("tokenVersion", Integer.class);
+
+            if (tokenVersion == null) {
+                return onError(exchange, "Missing token version", HttpStatus.UNAUTHORIZED);
+            }
 
             // 4. Inject extracted user information into Headers for downstream services to consume
             ServerHttpRequest mutatedRequest = request.mutate()
@@ -76,7 +89,24 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .header("X-User-Email", email != null ? String.valueOf(email) : "")
                     .build();
 
-            return chain.filter(exchange.mutate().request(mutatedRequest).build());
+            // 5. Validate token version with auth-service
+            return webClientBuilder.build()
+                    .get()
+                    .uri("http://auth-service/api/v1/auth/validate-version?username=" + username + "&version=" + tokenVersion)
+                    .retrieve()
+                    .bodyToMono(Boolean.class)
+                    .flatMap(isValid -> {
+                        if (Boolean.TRUE.equals(isValid)) {
+                            return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                        } else {
+                            return onError(exchange, "Invalid token version", HttpStatus.UNAUTHORIZED);
+                        }
+                    })
+                    .onErrorResume(e -> {
+                        System.err.println("WebClient validation failed: " + e.getMessage());
+                        e.printStackTrace();
+                        return onError(exchange, "Failed to validate token version", HttpStatus.INTERNAL_SERVER_ERROR);
+                    });
 
         } catch (Exception e) {
             return onError(exchange, "JWT validation failed: " + e.getMessage(), HttpStatus.UNAUTHORIZED);
