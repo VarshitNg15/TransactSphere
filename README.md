@@ -132,8 +132,8 @@ Before transactions are persisted or executed, the `transaction-service` evaluat
 ### 6. Multi-channel Asynchronous Notifications
 When a transaction executes successfully or gets blocked due to a fraud check:
 - **Emails** are dispatched via the SMTP template engine to the recipient and sender using a configured SMTP server (e.g., Gmail).
-- **SMS alerts** are generated and logged directly into the notification service console output (free of cost).
-- **In-App Notifications** are written to the postgres `notification_db` and can be retrieved dynamically by calling `/api/v1/notifications` from the frontend dashboard.
+- **SMS alerts** are sent globally in real-time via the **Twilio API**. Requires Twilio credentials and an E.164 formatted phone number.
+- **In-App Notifications** are written to the postgres `notification_db` and can be viewed or deleted dynamically by calling `/api/v1/notifications` from the frontend dashboard.
 
 ### 7. Transactional Outbox Pattern
 To solve the dual-write problem (e.g. saving to the database and publishing to Kafka atomically), the `transaction-service` utilizes the **Transactional Outbox Pattern**.
@@ -158,11 +158,15 @@ To solve the dual-write problem (e.g. saving to the database and publishing to K
 - **kubectl**: installed and configured
 
 ### Step 1: Clone and Configure Environment
-Copy `.env.example` to `.env` in the root directory:
+Copy `.env.example` to `.env` in the root directory and fill in your secrets (like Twilio credentials):
 ```bash
 cp .env.example .env
 ```
-Create a Kubernetes secret for environment variables if needed. By default, the application is pre-configured to locate resources on internal Kubernetes DNS.
+Create the Kubernetes secret for the environment variables:
+```bash
+kubectl create secret generic banking-secrets --from-env-file=.env
+```
+By default, the application is pre-configured to locate resources on internal Kubernetes DNS.
 
 ### Step 2: Spin Up Full Stack using Kubernetes
 You can deploy the entire infrastructure and microservices ecosystem to your Kubernetes cluster natively:
@@ -289,7 +293,7 @@ Invoke-RestMethod -Uri "http://localhost:8081/api/v1/transactions/deposit" `
 ### 6. Verify Events & Notification Delivery
 - **Email**: Check your configured SMTP email inbox to verify the transaction email alerts.
 - **Kubernetes Pods**: Run `kubectl get pods` to see all running microservice instances.
-- **SMS Logs**: Check the console log of the running `notification-service` (`kubectl logs -l app=notification-service`) to inspect mock SMS prints.
+- **SMS**: Check your verified phone for a live Twilio SMS. If it fails due to an unverified trial number, the error will appear in the `notification-service` logs (`kubectl logs -l app=notification-service`).
 - **In-App Notifications**:
   ```powershell
   Invoke-RestMethod -Uri "http://localhost:8081/api/v1/notifications" `
