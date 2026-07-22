@@ -4,6 +4,7 @@
 *.jar
 *.war
 *.ear
+discovery-server/
 
 # Environment & Secrets (Tokens, passwords, keys)
 .env
