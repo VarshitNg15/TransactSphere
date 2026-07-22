@@ -22,7 +22,7 @@ public class UserProfileUpdateRequest {
     private String lastName;
 
     @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^\\d{10}$", message = "Phone number must be exactly 10 digits")
+    @Pattern(regexp = "^\\+\\d{10,15}$", message = "Phone number must start with + and contain 10 to 15 digits")
     private String phoneNumber;
 
     @NotBlank(message = "Email is required")
