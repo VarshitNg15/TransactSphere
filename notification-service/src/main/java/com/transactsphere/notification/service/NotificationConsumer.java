@@ -69,8 +69,8 @@ public class NotificationConsumer {
 
             // 3. Prepare Notification Content
             String subject = "TransactSphere - Transaction Completed";
-            String message = String.format("Dear %s %s,\n\nA %s transaction of amount %s via %s has been successfully completed.\nTransaction ID: %s",
-                    user.getFirstName(), user.getLastName(),
+            String message = String.format("Dear %s,\n\nA %s transaction of amount %s via %s has been successfully completed.\nTransaction ID: %s",
+                    user.getUsername(),
                     event.getTransactionType(), event.getAmount(), event.getChannel(),
                     event.getTransactionId());
 
@@ -140,8 +140,8 @@ public class NotificationConsumer {
 
                 // 3. Prepare Notification Content
                 String subject = "URGENT: TransactSphere - Suspicious Activity Blocked";
-                String message = String.format("Dear %s %s,\n\nA suspicious %s transaction of amount %s via %s was attempted on your account and has been BLOCKED.\nReason: %s\nTransaction ID: %s. Please contact support immediately if this was not you.",
-                        user.getFirstName(), user.getLastName(),
+                String message = String.format("Dear %s,\n\nA suspicious %s transaction of amount %s via %s was attempted on your account and has been BLOCKED.\nReason: %s\nTransaction ID: %s. Please contact support immediately if this was not you.",
+                        user.getUsername(),
                         event.getTransactionType(), event.getAmount(), event.getChannel(),
                         event.getFraudReason() != null ? event.getFraudReason() : "Suspicious Activity",
                         event.getTransactionId());
