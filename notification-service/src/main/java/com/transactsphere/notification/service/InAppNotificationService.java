@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 @Service
@@ -29,5 +31,17 @@ public class InAppNotificationService {
 
     public List<NotificationLog> getInAppNotifications(Long userId) {
         return notificationLogRepository.findByUserIdAndTypeOrderByTimestampDesc(userId, NotificationType.IN_APP);
+    }
+
+    @Transactional
+    public void deleteNotification(Long id, Long userId) {
+        notificationLogRepository.deleteByIdAndUserId(id, userId);
+        log.info("Deleted notification {} for user {}", id, userId);
+    }
+
+    @Transactional
+    public void deleteAllMyNotifications(Long userId) {
+        notificationLogRepository.deleteByUserId(userId);
+        log.info("Deleted all notifications for user {}", userId);
     }
 }

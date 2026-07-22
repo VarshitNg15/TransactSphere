@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
-import { CreditCard, Bell, MessageSquare, Plus, PlusCircle, Activity, Eye, EyeOff } from 'lucide-react';
+import { CreditCard, Bell, MessageSquare, Plus, PlusCircle, Activity, Eye, EyeOff, X, Trash2 } from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -58,6 +58,24 @@ const Dashboard = () => {
     } catch (err) {
       console.error('Failed to create account', err);
       alert(err.response?.data?.message || 'Failed to create account');
+    }
+  };
+
+  const deleteNotification = async (id) => {
+    try {
+      await api.delete(`/notifications/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (err) {
+      console.error('Failed to delete notification', err);
+    }
+  };
+
+  const deleteAllNotifications = async () => {
+    try {
+      await api.delete('/notifications/all');
+      setNotifications([]);
+    } catch (err) {
+      console.error('Failed to clear notifications', err);
     }
   };
 
@@ -162,18 +180,28 @@ const Dashboard = () => {
         </div>
 
         <div className="glass-panel notifications-panel">
-          <h2><Bell size={28} color="var(--warning)" /> Notifications</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ marginBottom: 0 }}><Bell size={28} color="var(--warning)" /> Notifications</h2>
+            {notifications.length > 0 && (
+              <button onClick={deleteAllNotifications} style={{ padding: '6px 12px', fontSize: '12px', background: 'transparent', border: '1px solid var(--text-secondary)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Trash2 size={14} /> Clear All
+              </button>
+            )}
+          </div>
           {notifications.length === 0 ? (
             <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: '2rem 0' }}>No new notifications right now.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {notifications.map((notif, idx) => (
-                <div key={idx} className="notification-item">
+                <div key={notif.id || idx} className="notification-item" style={{ position: 'relative' }}>
                   <Bell size={24} color="var(--accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div>
+                  <div style={{ flex: 1, paddingRight: '24px' }}>
                     <p>{notif.message}</p>
                     <small>{new Date(notif.timestamp).toLocaleString()}</small>
                   </div>
+                  <button onClick={() => deleteNotification(notif.id)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}>
+                    <X size={18} />
+                  </button>
                 </div>
               ))}
             </div>

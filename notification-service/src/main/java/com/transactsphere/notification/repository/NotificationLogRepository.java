@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface NotificationLogRepository extends JpaRepository<NotificationLog, Long> {
     List<NotificationLog> findByUserIdAndTypeOrderByTimestampDesc(Long userId, NotificationType type);
+    void deleteByIdAndUserId(Long id, Long userId);
+    void deleteByUserId(Long userId);
 }

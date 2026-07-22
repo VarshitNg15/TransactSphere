@@ -246,7 +246,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: notification-service:v2
+          image: notification-service:v4
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085
