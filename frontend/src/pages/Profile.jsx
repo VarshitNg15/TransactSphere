@@ -131,7 +131,7 @@ const Profile = () => {
               </div>
               <div className="form-group">
                 <label style={{ fontFamily: 'Inter' }}>Phone Number</label>
-                <input type="text" name="phoneNumber" className="input-field" value={formData.phoneNumber} onChange={handleChange} pattern="\d{10}" title="Phone number must be exactly 10 digits" required />
+                <input type="text" name="phoneNumber" className="input-field" value={formData.phoneNumber} placeholder="e.g. +91XXXXXXXXXX" onChange={handleChange} pattern="^\+\d{10,15}$" title="Phone number must start with + and country code, followed by digits (max 15 total)" required />
               </div>
               <div className="form-group">
                 <label>Email</label>

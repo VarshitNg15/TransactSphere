@@ -56,7 +56,7 @@ const Register = () => {
           </div>
           <div className="form-group">
             <label>Phone Number</label>
-            <input type="text" name="phone" className="input-field" placeholder="10 digit number" pattern="\d{10}" title="Phone number must be exactly 10 digits" onChange={handleChange} required />
+            <input type="text" name="phone" className="input-field" placeholder="e.g. +91XXXXXXXXXX" pattern="^\+\d{10,15}$" title="Phone number must start with + and country code, followed by digits (max 15 total)" onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label>Password</label>
