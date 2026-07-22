@@ -6,12 +6,12 @@ TransactSphere is an enterprise-grade, event-driven microservices banking applic
 
 ## 📖 Detailed Summary & Architecture
 
-TransactSphere is architected around the **Database-per-Service** pattern to guarantee strict service boundary isolation. Services are dynamically registered and discovered using **Netflix Eureka (Discovery Server)**, enabling load balancing and dynamic routing without hardcoded URLs. They communicate either synchronously via **Spring Cloud OpenFeign** (for immediate consistency operations like debit/credit checks) or asynchronously via **Apache Kafka** (for eventual consistency flows like triggering email/SMS alerts upon transaction completion).
+TransactSphere is architected around the **Database-per-Service** pattern to guarantee strict service boundary isolation. Services are seamlessly deployed using **Kubernetes**, relying on **Kubernetes Native Service Discovery (CoreDNS)** for internal routing and load balancing without hardcoded URLs. They communicate either synchronously via **Spring Cloud OpenFeign** (for immediate consistency operations like debit/credit checks) or asynchronously via **Apache Kafka** (for eventual consistency flows like triggering email/SMS alerts upon transaction completion).
 
 ### Key Architectural Concepts
-1. **Dynamic Service Discovery**: A central **Eureka Discovery Server** maintains a registry of all active microservice instances. The API Gateway and inter-service Feign clients seamlessly route requests to available instances.
-2. **API Gateway Security**: All client traffic flows through the `gateway` module, which validates JWT tokens, resolves client IP addresses to apply granular rate-limits (using Redis), and injects verified edge headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) to downstream services dynamically resolved via Eureka.
-3. **Database Isolation**: The infrastructure initializes isolated PostgreSQL databases for each service instance (e.g., `auth_db`, `user_db`, `account_db`) rather than using a single shared database, preventing tight service coupling.
+1. **Kubernetes Service Discovery**: Microservices utilize Kubernetes CoreDNS for native service discovery. The API Gateway and inter-service Feign clients seamlessly route requests directly to Kubernetes service names (e.g., `auth-service:8081`).
+2. **API Gateway Security**: All client traffic flows through the `gateway` module, which validates JWT tokens, resolves client IP addresses to apply granular rate-limits (using Redis), and injects verified edge headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) to downstream services resolved via Kubernetes DNS.
+3. **Database Isolation & Persistent Storage**: The infrastructure initializes isolated PostgreSQL databases for each service instance (e.g., `auth_db`, `user_db`, `account_db`) rather than using a single shared database. Kubernetes **Persistent Volume Claims (PVCs)** ensure stateful data durability across pod crashes or restarts.
 4. **Anti-Stampede Caching Strategy**: The `account-service` employs an advanced caching system utilizing **Probabilistic Early Expiration (XFetch)** and **SingleFlight**. This completely eliminates cache misses for hot keys, ensures zero wait times for end-users during refreshes, and prevents database stampedes.
 5. **Asynchronous Notification Routing**: High-latency notification delivery (Email, SMS) is decoupled from the transaction journey. The `transaction-service` publishes events to Kafka, allowing the `notification-service` to process them asynchronously.
 
@@ -22,7 +22,7 @@ TransactSphere is architected around the **Database-per-Service** pattern to gua
 ### Backend
 - **Language**: Java 21
 - **Framework**: Spring Boot 3.2.5
-- **Microservice Integration**: Spring Cloud 2023.0.1 (Netflix Eureka, Spring Cloud Gateway, OpenFeign)
+- **Microservice Integration**: Spring Cloud 2023.0.1 (Spring Cloud Gateway, OpenFeign)
 - **Security**: Spring Security & JSON Web Tokens (JJWT 0.11.5)
 - **Data Access & Mapping**: Spring Data JPA, MapStruct 1.5.5, Lombok 1.18.32
 - **Database Driver**: PostgreSQL JDBC Driver
@@ -37,11 +37,10 @@ TransactSphere is architected around the **Database-per-Service** pattern to gua
 - **Styling**: Vanilla CSS custom variables system implementing a modern glassmorphism design with persistent light/dark themes.
 
 ### Infrastructure & Operations
-- **Containerization**: Docker & Docker Compose
-- **Relational Database**: PostgreSQL 15 (Alpine)
-- **Key-Value Store / Cache**: Redis 7 (Alpine)
-- **Message Broker**: Apache Kafka 3.4.0 (Bitnami KRaft mode, eliminating Zookeeper dependency)
-- **Reverse Proxy**: Nginx (handling ports 80 and 443)
+- **Containerization & Orchestration**: Docker & Kubernetes (Minikube / Managed K8s)
+- **Relational Database**: PostgreSQL 15 (Alpine with Persistent Volumes)
+- **Key-Value Store / Cache**: Redis 7 (Alpine with Append-Only Persistency)
+- **Message Broker**: Apache Kafka 3.4.0 (Bitnami KRaft mode, with Persistent Volumes)
 
 ---
 
@@ -54,12 +53,14 @@ TransactSphere/
 ├── pom.xml                           # Parent Maven configuration
 ├── .env.example                      # Shell environment config template
 ├── README.md                         # Project documentation (this file)
+├── k8s/
+│   ├── infrastructure.yaml           # K8s Deployments/Services/PVCs for Postgres, Redis, Kafka
+│   └── services.yaml                 # K8s Deployments/Services for all backend microservices
 ├── docker/
-│   ├── docker-compose.infra.yml      # Infrastructure service declarations (Postgres, Redis, Kafka, Nginx)
+│   ├── docker-compose.infra.yml      # Legacy docker infrastructure fallback
 │   └── postgres/
 │       └── init-db.sql               # PostgreSQL initial DB creations
-├── discovery-server/                 # Netflix Eureka Service Registry - Port 8761
-├── gateway/                          # API Gateway (Spring Cloud Gateway) - Port 8080
+├── gateway/                          # API Gateway (Spring Cloud Gateway) - Port 8080 (Local: 8081)
 ├── auth-service/                     # Identity Management & JWT Generation - Port 8081
 ├── user-service/                     # User Profiles & KYC status - Port 8082
 ├── account-service/                  # Accounts & Caching - Port 8083
@@ -79,20 +80,18 @@ TransactSphere/
 
 | Service Name | Port | Database Name | Internal/External Resources Used |
 | :--- | :---: | :--- | :--- |
-| **Discovery Server** | `8761` | *None* | Netflix Eureka Service Registry |
-| **API Gateway** | `8080` | *None* | Redis (IP-based Request Rate Limiting), Eureka |
-| **Auth Service** | `8081` | `auth_db` | PostgreSQL, Redis (JWT Blacklisting), Eureka |
-| **User Service** | `8082` | `user_db` | PostgreSQL, Kafka, Eureka |
-| **Account Service** | `8083` | `account_db` | PostgreSQL, Redis (Balance Caching), Kafka, Eureka |
-| **Transaction Service** | `8084` | `transaction_db` | PostgreSQL, OpenFeign, Kafka, Eureka |
-| **Notification Service** | `8085` | `notification_db` | PostgreSQL, Kafka (Consumer), SMTP MailHog, Eureka |
-| **Fraud Service** | `8086` | `fraud_db` | PostgreSQL, Kafka (Consumer), Eureka |
-| **Analytics Service** | `8087` | `analytics_db` | PostgreSQL, Kafka (Consumer), Eureka |
-| **Audit Service** | `8088` | `audit_db` | PostgreSQL, Kafka (Consumer), Eureka |
-| **Statement Service** | `8089` | `statement_db` | PostgreSQL, OpenFeign, Eureka |
-| **Admin Service** | `8090` | *None* | OpenFeign, Eureka |
+| **API Gateway** | `8080` (Local: `8081`) | *None* | Redis (IP-based Request Rate Limiting), K8s DNS |
+| **Auth Service** | `8081` | `auth_db` | PostgreSQL, Redis (JWT Blacklisting), K8s DNS |
+| **User Service** | `8082` | `user_db` | PostgreSQL, Kafka, K8s DNS |
+| **Account Service** | `8083` | `account_db` | PostgreSQL, Redis (Balance Caching), Kafka, K8s DNS |
+| **Transaction Service** | `8084` | `transaction_db` | PostgreSQL, OpenFeign, Kafka, K8s DNS |
+| **Notification Service** | `8085` | `notification_db` | PostgreSQL, Kafka (Consumer), SMTP (e.g., Gmail), K8s DNS |
+| **Fraud Service** | `8086` | `fraud_db` | PostgreSQL, Kafka (Consumer), K8s DNS |
+| **Analytics Service** | `8087` | `analytics_db` | PostgreSQL, Kafka (Consumer), K8s DNS |
+| **Audit Service** | `8088` | `audit_db` | PostgreSQL, Kafka (Consumer), K8s DNS |
+| **Statement Service** | `8089` | `statement_db` | PostgreSQL, OpenFeign, K8s DNS |
+| **Admin Service** | `8090` | *None* | OpenFeign, K8s DNS |
 | **React Frontend** | `5173` | *None (Local Storage)*| Browser Client connecting to Gateway |
-| **Nginx Proxy** | `80` / `443` | *N/A* | Edge proxy mapping traffic to Gateway |
 | **PostgreSQL** | `5432` | *N/A (Multi-DB)* | Stores data for all backend services |
 | **Redis Cache** | `6379` | *N/A* | In-memory cache & session store |
 | **Kafka Broker** | `9092` / `29092` | *N/A* | Asynchronous communication pipeline (KRaft) |
@@ -101,10 +100,10 @@ TransactSphere/
 
 ## 🛡️ Core Features
 
-### 1. Dynamic Service Discovery
-- Centralized registry where microservices announce their presence.
-- API Gateway acts as the edge proxy mapping routes to Eureka instances.
-- Internal communication via `@FeignClient` is resolved automatically via Eureka, removing the need for static IPs.
+### 1. Kubernetes Native Service Discovery
+- Seamless internal routing leveraging Kubernetes CoreDNS.
+- API Gateway directly routes to internal Kubernetes service names.
+- Internal communication via `@FeignClient` resolves seamlessly using K8s service names, removing the need for an external registry (Eureka).
 
 ### 2. Secure Authentication & Session Store
 - Token-based stateless authentication utilizing JSON Web Tokens.
@@ -155,77 +154,39 @@ To solve the dual-write problem (e.g. saving to the database and publishing to K
 ### Prerequisites
 - **Java Development Kit (JDK)**: version 21
 - **Apache Maven**: version 3.8+
-- **Docker & Docker Compose**: installed and running
+- **Kubernetes Environment**: Minikube, Docker Desktop K8s, or cloud-managed K8s cluster
+- **kubectl**: installed and configured
 
 ### Step 1: Clone and Configure Environment
 Copy `.env.example` to `.env` in the root directory:
 ```bash
 cp .env.example .env
 ```
-Ensure your configuration reflects local requirements. By default, the application is pre-configured to locate resources on `localhost`.
+Create a Kubernetes secret for environment variables if needed. By default, the application is pre-configured to locate resources on internal Kubernetes DNS.
 
-### Step 2: Spin Up Full Stack using Docker Compose
-You can run the entire infrastructure and microservices ecosystem using the provided `docker-compose.yml`:
+### Step 2: Spin Up Full Stack using Kubernetes
+You can deploy the entire infrastructure and microservices ecosystem to your Kubernetes cluster natively:
 ```bash
-docker compose up -d --build
+# 1. Start persistent infrastructure (Postgres, Redis, Kafka)
+kubectl apply -f k8s/infrastructure.yaml
+
+# 2. Deploy all microservices
+kubectl apply -f k8s/services.yaml
 ```
-This will start:
-- Postgres (`5432`)
-- Redis (`6379`)
-- Kafka (`9092`/`29092`)
-- Nginx (`80`/`443`)
-- Discovery Server (`8761`)
+This will create deployments, services, and persistent volumes for:
+- Postgres (`5432` with PVC)
+- Redis (`6379` with PVC)
+- Kafka (`9092` with PVC)
 - API Gateway (`8080`)
-- Auth, User, Account, Transaction, and Notification Services
+- Auth, User, Account, Transaction, Notification, Fraud, Analytics, Audit, Statement, and Admin Services
 
-### Alternative: Running Microservices Manually (Backend)
-If you prefer to run services manually via Maven instead of Docker, first start the infrastructure components:
+### Step 3: Expose the API Gateway
+If you are running Minikube, you can port-forward the API gateway to access it locally:
 ```bash
-docker compose -f docker/docker-compose.infra.yml up -d
-```
-Then, start the services in individual terminals (ensure **Discovery Server** starts first):
-
-```bash
-# 1. Start Discovery Server (Port 8761)
-cd discovery-server && mvn spring-boot:run
-
-# 2. Start Gateway Service (Port 8080)
-cd ../gateway && mvn spring-boot:run
-
-# 3. Start Auth Service (Port 8081)
-cd ../auth-service && mvn spring-boot:run
-
-# 4. Start User Service (Port 8082)
-cd ../user-service && mvn spring-boot:run
-
-# 5. Start Account Service (Port 8083)
-cd ../account-service && mvn spring-boot:run
-
-# 6. Start Transaction Service (Port 8084)
-cd ../transaction-service && mvn spring-boot:run
-
-# 7. Start Notification Service (Port 8085)
-cd ../notification-service && mvn spring-boot:run
-
-# 8. Start Fraud Service (Port 8086)
-cd ../fraud-service && mvn spring-boot:run
-
-# 9. Start Analytics Service (Port 8087)
-cd ../analytics-service && mvn spring-boot:run
-
-# 10. Start Audit Service (Port 8088)
-cd ../audit-service && mvn spring-boot:run
-
-# 11. Start Statement Service (Port 8089)
-cd ../statement-service && mvn spring-boot:run
-
-# 12. Start Admin Service (Port 8090)
-cd ../admin-service && mvn spring-boot:run
+kubectl port-forward svc/gateway 8081:8080
 ```
 
-*(Note: Wait for the Discovery Server to fully initialize before starting the other microservices so they can successfully register upon startup).*
-
-### Step 3: Start the Frontend Application
+### Step 4: Start the Frontend Application
 ```bash
 # Navigate to the frontend directory
 cd frontend
@@ -253,7 +214,7 @@ $registerBody = @{
     role = "CUSTOMER"
 } | ConvertTo-Json
 
-$user = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/register" `
+$user = Invoke-RestMethod -Uri "http://localhost:8081/api/v1/auth/register" `
     -Method Post `
     -Headers @{"Content-Type"="application/json"} `
     -Body $registerBody
@@ -266,7 +227,7 @@ $loginBody = @{
     password = "SecurePassword123"
 } | ConvertTo-Json
 
-$loginResponse = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/auth/login" `
+$loginResponse = Invoke-RestMethod -Uri "http://localhost:8081/api/v1/auth/login" `
     -Method Post `
     -Headers @{"Content-Type"="application/json"} `
     -Body $loginBody
@@ -277,7 +238,7 @@ $token = $loginResponse.accessToken
 ### 3. Check and Update Profile
 ```powershell
 # Retrieve profile (triggers automatic profile creation)
-$profile = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/users/profile" `
+$profile = Invoke-RestMethod -Uri "http://localhost:8081/api/v1/users/profile" `
     -Method Get `
     -Headers @{"Authorization"="Bearer $token"}
 
@@ -290,7 +251,7 @@ $updateProfileBody = @{
     address = "456 Wall Street, New York"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/users/profile" `
+Invoke-RestMethod -Uri "http://localhost:8081/api/v1/users/profile" `
     -Method Put `
     -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} `
     -Body $updateProfileBody
@@ -302,7 +263,7 @@ $accountBody = @{
     accountType = "SAVINGS"
 } | ConvertTo-Json
 
-$account = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/accounts" `
+$account = Invoke-RestMethod -Uri "http://localhost:8081/api/v1/accounts" `
     -Method Post `
     -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} `
     -Body $accountBody
@@ -319,7 +280,7 @@ $depositBody = @{
     description = "Monthly savings deposit"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://localhost:8080/api/v1/transactions/deposit" `
+Invoke-RestMethod -Uri "http://localhost:8081/api/v1/transactions/deposit" `
     -Method Post `
     -Headers @{"Authorization"="Bearer $token"; "Content-Type"="application/json"} `
     -Body $depositBody
@@ -327,11 +288,11 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/v1/transactions/deposit" `
 
 ### 6. Verify Events & Notification Delivery
 - **Email**: Check your configured SMTP email inbox to verify the transaction email alerts.
-- **Eureka Dashboard**: Go to [http://localhost:8761](http://localhost:8761) to view all registered microservices.
-- **SMS Logs**: Check the console log of the running `notification-service` to inspect mock SMS prints.
+- **Kubernetes Pods**: Run `kubectl get pods` to see all running microservice instances.
+- **SMS Logs**: Check the console log of the running `notification-service` (`kubectl logs -l app=notification-service`) to inspect mock SMS prints.
 - **In-App Notifications**:
   ```powershell
-  Invoke-RestMethod -Uri "http://localhost:8080/api/v1/notifications" `
+  Invoke-RestMethod -Uri "http://localhost:8081/api/v1/notifications" `
       -Method Get `
       -Headers @{"Authorization"="Bearer $token"}
   ```
