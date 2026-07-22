@@ -177,11 +177,6 @@ public class NotificationConsumer {
     public void consumeGenericEvent(String eventJson) {
         try {
             com.transactsphere.notification.dto.GenericEvent event = objectMapper.readValue(eventJson, com.transactsphere.notification.dto.GenericEvent.class);
-            String eventId = "notification.generic:" + event.getUserId() + ":" + Math.abs(event.getMessage().hashCode());
-            if (processedEventRepository.findById(eventId).isPresent()) {
-                log.info("Event {} already processed. Skipping.", eventId);
-                return;
-            }
             log.info("Received generic notification for user {}", event.getUserId());
             
             UserProfileResponse user = userClient.getUserInternal(event.getUserId());
@@ -202,11 +197,6 @@ public class NotificationConsumer {
                 saveLog(user.getId(), message, NotificationType.SMS, smsSent ? "SENT" : "FAILED");
             }
             inAppNotificationService.saveInAppNotification(user.getId(), message);
-
-            processedEventRepository.save(ProcessedEvent.builder()
-                    .eventId(eventId)
-                    .status("COMPLETED")
-                    .build());
 
         } catch (Exception e) {
             log.error("Error processing generic event", e);

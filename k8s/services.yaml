@@ -156,7 +156,7 @@ spec:
     spec:
       containers:
         - name: account-service
-          image: account-service:latest
+          image: account-service:lv2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
@@ -246,7 +246,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: notification-service:v4
+          image: notification-service:v6
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085
