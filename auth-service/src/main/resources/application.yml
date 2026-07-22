@@ -1,10 +1,7 @@
 server:
   port: 8081
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
+
 
 spring:
   application:
@@ -37,7 +34,7 @@ spring:
 
 jwt:
   # Base64 HS256 secret key (same as gateway)
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  secret: ${JWT_SECRET}
   expiration: 3600000       # 1 hour in ms
   refresh-expiration: 604800000 # 7 days in ms
 

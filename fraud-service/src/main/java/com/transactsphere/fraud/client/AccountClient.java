@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(name = "account-service")
+@FeignClient(name = "account-service", url = "http://account-service:8083")
 public interface AccountClient {
     @GetMapping("/internal/accounts/user/{userId}")
     List<String> getAccountNumbersByUserInternal(@PathVariable("userId") Long userId);

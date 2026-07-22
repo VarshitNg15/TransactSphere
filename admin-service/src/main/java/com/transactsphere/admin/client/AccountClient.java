@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "account-service")
+@FeignClient(name = "account-service", url = "http://account-service:8083")
 public interface AccountClient {
     @PutMapping("/api/v1/accounts/{accountNumber}/freeze")
     Object freezeAccount(

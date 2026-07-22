@@ -92,7 +92,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             // 5. Validate token version with auth-service
             return webClientBuilder.build()
                     .get()
-                    .uri("http://auth-service/api/v1/auth/validate-version?username=" + username + "&version=" + tokenVersion)
+                    .uri("http://auth-service:8081/api/v1/auth/validate-version?username=" + username + "&version=" + tokenVersion)
                     .retrieve()
                     .bodyToMono(Boolean.class)
                     .flatMap(isValid -> {

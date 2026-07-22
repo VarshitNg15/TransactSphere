@@ -3,10 +3,6 @@ server:
   tomcat:
     max-http-form-post-size: 10MB
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
 
 spring:
   application:
@@ -47,7 +43,7 @@ spring:
       routes:
         # Auth Service Route
         - id: auth-service
-          uri: lb://auth-service
+          uri: http://auth-service:8081
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -59,7 +55,7 @@ spring:
 
         # User Service Route
         - id: user-service
-          uri: lb://user-service
+          uri: http://user-service:8082
           predicates:
             - Path=/api/v1/users/**
           filters:
@@ -71,7 +67,7 @@ spring:
 
         # Account Service Route
         - id: account-service
-          uri: lb://account-service
+          uri: http://account-service:8083
           predicates:
             - Path=/api/v1/accounts/**
           filters:
@@ -83,7 +79,7 @@ spring:
 
         # Transaction Service Route
         - id: transaction-service
-          uri: lb://transaction-service
+          uri: http://transaction-service:8084
           predicates:
             - Path=/api/v1/transactions/**,/api/v1/requests/**
           filters:
@@ -95,43 +91,43 @@ spring:
 
         # Notification Service Route
         - id: notification-service
-          uri: lb://notification-service
+          uri: http://notification-service:8085
           predicates:
             - Path=/api/v1/notifications/**
 
         # Fraud Service Route
         - id: fraud-service
-          uri: lb://fraud-service
+          uri: http://fraud-service:8086
           predicates:
             - Path=/api/v1/fraud/**
 
         # Analytics Service Route
         - id: analytics-service
-          uri: lb://analytics-service
+          uri: http://analytics-service:8087
           predicates:
             - Path=/api/v1/analytics/**
 
         # Audit Service Route
         - id: audit-service
-          uri: lb://audit-service
+          uri: http://audit-service:8088
           predicates:
             - Path=/api/v1/audit/**
 
         # Statement Service Route
         - id: statement-service
-          uri: lb://statement-service
+          uri: http://statement-service:8089
           predicates:
             - Path=/api/v1/statements/**
 
         # Admin Service Route
         - id: admin-service
-          uri: lb://admin-service
+          uri: http://admin-service:8090
           predicates:
             - Path=/api/v1/admin/**
 
 # Gateway JWT configurations
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970} # HS256 base64-encoded secret key
+  secret: ${JWT_SECRET} # HS256 base64-encoded secret key
   expiration: 86400000 # 24 hours in milliseconds
 
 # Spring Boot Actuator settings

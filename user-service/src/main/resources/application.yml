@@ -3,10 +3,7 @@ server:
   tomcat:
     max-http-form-post-size: 10MB
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://${EUREKA_SERVER_HOST:localhost}:8761/eureka/
+
 
 spring:
   servlet:

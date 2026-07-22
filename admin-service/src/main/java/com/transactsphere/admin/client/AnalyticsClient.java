@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.Map;
 
-@FeignClient(name = "analytics-service")
+@FeignClient(name = "analytics-service", url = "http://analytics-service:8087")
 public interface AnalyticsClient {
     @GetMapping("/api/v1/analytics/dashboard")
     Map<String, Object> getDashboard(@RequestHeader("X-User-Roles") String roles);
