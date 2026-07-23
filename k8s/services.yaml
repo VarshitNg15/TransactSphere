@@ -156,7 +156,7 @@ spec:
     spec:
       containers:
         - name: account-service
-          image: account-service:lv2
+          image: account-service:v2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
