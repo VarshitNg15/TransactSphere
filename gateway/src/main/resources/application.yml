@@ -24,7 +24,7 @@ spring:
     gateway:
       globalcors:
         cors-configurations:
-          '[/**]':
+          '/**':
             allowedOriginPatterns: 
               - "http://localhost:5173"
               - "https://*.vercel.app"
