@@ -9,7 +9,7 @@ const Transactions = () => {
   const [incomingReqs, setIncomingReqs] = useState([]);
   const [outgoingReqs, setOutgoingReqs] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [form, setForm] = useState({
     type: 'TRANSFER', // Only TRANSFER now
     sourceAccount: '',
@@ -46,10 +46,10 @@ const Transactions = () => {
       if (Array.isArray(txRes.data)) {
         setTransactions(txRes.data);
       }
-      
+
       api.get('/requests/incoming').then(res => setIncomingReqs(res.data)).catch(console.error);
       if (accRes.data.length > 0) {
-         api.get(`/requests/outgoing?accountNumber=${accRes.data[0].accountNumber}`).then(res => setOutgoingReqs(res.data)).catch(console.error);
+        api.get(`/requests/outgoing?accountNumber=${accRes.data[0].accountNumber}`).then(res => setOutgoingReqs(res.data)).catch(console.error);
       }
 
     } catch (err) {
@@ -62,7 +62,7 @@ const Transactions = () => {
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-  
+
   const handleReqInputChange = (e) => {
     setReqForm({ ...reqForm, [e.target.name]: e.target.value });
   };
@@ -70,7 +70,7 @@ const Transactions = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ text: 'Processing...', type: 'info' });
-    
+
     try {
       const payload = {
         amount: parseFloat(form.amount),
@@ -83,7 +83,7 @@ const Transactions = () => {
       await api.post('/transactions/transfer', payload);
       setMessage({ text: 'Transfer successful!', type: 'success' });
       setForm({ ...form, amount: '', description: '', targetAccount: '' });
-      fetchData(); 
+      fetchData();
     } catch (err) {
       setMessage({ text: err.response?.data?.message || 'Transfer failed.', type: 'error' });
     }
@@ -131,16 +131,16 @@ const Transactions = () => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header glass-panel" style={{ display: 'flex', gap: '15px' }}>
-        <button 
-          className="auth-button" 
-          onClick={() => { setActiveTab('transfer'); setMessage({text:'', type:''}); }}
+        <button
+          className="auth-button"
+          onClick={() => { setActiveTab('transfer'); setMessage({ text: '', type: '' }); }}
           style={{ background: activeTab === 'transfer' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)' }}
         >
           Transfer Money
         </button>
-        <button 
-          className="auth-button" 
-          onClick={() => { setActiveTab('requests'); setMessage({text:'', type:''}); }}
+        <button
+          className="auth-button"
+          onClick={() => { setActiveTab('requests'); setMessage({ text: '', type: '' }); }}
           style={{ background: activeTab === 'requests' ? 'var(--accent)' : 'transparent', border: '1px solid var(--accent)' }}
         >
           Money Requests
@@ -171,38 +171,38 @@ const Transactions = () => {
 
               <div className="form-group">
                 <label>Target Account Number</label>
-                <input 
-                  type="text" 
-                  name="targetAccount" 
-                  value={form.targetAccount} 
-                  onChange={handleInputChange} 
-                  className="input-field" 
-                  required 
+                <input
+                  type="text"
+                  name="targetAccount"
+                  value={form.targetAccount}
+                  onChange={handleInputChange}
+                  className="input-field"
+                  required
                 />
               </div>
 
               <div className="form-group">
                 <label>Amount (₹)</label>
-                <input 
-                  type="number" 
-                  name="amount" 
-                  value={form.amount} 
-                  onChange={handleInputChange} 
-                  className="input-field" 
+                <input
+                  type="number"
+                  name="amount"
+                  value={form.amount}
+                  onChange={handleInputChange}
+                  className="input-field"
                   min="1"
-                  step="0.01"
-                  required 
+                  step="1"
+                  required
                 />
               </div>
 
               <div className="form-group">
                 <label>Description</label>
-                <input 
-                  type="text" 
-                  name="description" 
-                  value={form.description} 
-                  onChange={handleInputChange} 
-                  className="input-field" 
+                <input
+                  type="text"
+                  name="description"
+                  value={form.description}
+                  onChange={handleInputChange}
+                  className="input-field"
                 />
               </div>
 
@@ -276,38 +276,38 @@ const Transactions = () => {
 
               <div className="form-group">
                 <label>Target Username</label>
-                <input 
-                  type="text" 
-                  name="targetUsername" 
-                  value={reqForm.targetUsername} 
-                  onChange={handleReqInputChange} 
-                  className="input-field" 
-                  required 
+                <input
+                  type="text"
+                  name="targetUsername"
+                  value={reqForm.targetUsername}
+                  onChange={handleReqInputChange}
+                  className="input-field"
+                  required
                 />
               </div>
 
               <div className="form-group">
                 <label>Amount (₹)</label>
-                <input 
-                  type="number" 
-                  name="amount" 
-                  value={reqForm.amount} 
-                  onChange={handleReqInputChange} 
-                  className="input-field" 
+                <input
+                  type="number"
+                  name="amount"
+                  value={reqForm.amount}
+                  onChange={handleReqInputChange}
+                  className="input-field"
                   min="1"
-                  step="0.01"
-                  required 
+                  step="1"
+                  required
                 />
               </div>
 
               <div className="form-group">
                 <label>Description</label>
-                <input 
-                  type="text" 
-                  name="description" 
-                  value={reqForm.description} 
-                  onChange={handleReqInputChange} 
-                  className="input-field" 
+                <input
+                  type="text"
+                  name="description"
+                  value={reqForm.description}
+                  onChange={handleReqInputChange}
+                  className="input-field"
                 />
               </div>
 
