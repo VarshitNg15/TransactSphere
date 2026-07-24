@@ -15,7 +15,8 @@ const Transactions = () => {
     sourceAccount: '',
     targetAccount: '',
     amount: '',
-    description: ''
+    description: '',
+    channel: 'INTERNAL'
   });
 
   const [reqForm, setReqForm] = useState({
@@ -75,7 +76,8 @@ const Transactions = () => {
         amount: parseFloat(form.amount),
         description: form.description,
         sourceAccountNumber: form.sourceAccount,
-        targetAccountNumber: form.targetAccount
+        targetAccountNumber: form.targetAccount,
+        channel: form.channel
       };
 
       await api.post('/transactions/transfer', payload);
@@ -202,6 +204,16 @@ const Transactions = () => {
                   onChange={handleInputChange} 
                   className="input-field" 
                 />
+              </div>
+
+              <div className="form-group">
+                <label>Transfer Channel</label>
+                <select name="channel" value={form.channel} onChange={handleInputChange} className="input-field" required>
+                  <option value="INTERNAL">Internal Transfer</option>
+                  <option value="UPI">UPI</option>
+                  <option value="NEFT">NEFT</option>
+                  <option value="RTGS">RTGS</option>
+                </select>
               </div>
 
               <button type="submit" className="tx-button auth-button">Transfer Now</button>
