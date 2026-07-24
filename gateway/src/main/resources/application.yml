@@ -23,12 +23,17 @@ spring:
   cloud:
     gateway:
       globalcors:
+        add-to-simple-url-handler-mapping: true
         cors-configurations:
-          '/**':
-            allowedOriginPatterns: 
+          '[/**]':
+            allowedOrigins: 
               - "http://localhost:5173"
+              - "https://transact-sphere.vercel.app"
+              - "https://brewing-pending-scrambler.ngrok-free.dev"
+            allowedOriginPatterns:
               - "https://*.vercel.app"
               - "https://*.ngrok-free.app"
+              - "https://*.ngrok-free.dev"
               - "https://*.ngrok.app"
             allowedMethods:
               - GET
