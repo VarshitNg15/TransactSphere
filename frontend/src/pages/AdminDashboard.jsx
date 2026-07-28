@@ -266,11 +266,11 @@ const AdminDashboard = () => {
                   {fraudLogs.length > 0 ? fraudLogs.map(log => (
                     <tr key={log.id}>
                       <td style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{new Date(log.timestamp).toLocaleString()}</td>
-                      <td style={{ fontFamily: 'monospace' }}>{log.accountNumber}</td>
-                      <td>{log.reason}</td>
+                      <td style={{ fontFamily: 'monospace' }}>{log.accountNumber || log.sourceAccountNumber}</td>
+                      <td>{log.reason || log.fraudReason}</td>
                       <td>
-                        <span style={{ color: log.riskScore > 80 ? 'var(--danger)' : 'var(--warning)', fontWeight: 700 }}>
-                          {log.riskScore}
+                        <span style={{ color: (log.riskScore || 99) > 80 ? 'var(--danger)' : 'var(--warning)', fontWeight: 700 }}>
+                          {log.riskScore || 99}
                         </span>
                       </td>
                       <td>
