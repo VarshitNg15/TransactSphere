@@ -316,11 +316,11 @@ const AdminDashboard = () => {
                     <tr key={log.id}>
                       <td style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{new Date(log.timestamp).toLocaleString()}</td>
                       <td><span style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>{log.serviceName}</span></td>
-                      <td style={{ fontWeight: 500 }}>{log.action}</td>
-                      <td style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{log.targetIdentifier}</td>
+                      <td style={{ fontWeight: 500 }}>{log.action || log.eventType || 'System Event'}</td>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{log.targetIdentifier || (log.userId ? `User: ${log.userId}` : 'System')}</td>
                       <td>
-                        <span className={`status-badge ${log.status === 'SUCCESS' ? 'completed' : 'failed'}`}>
-                          {log.status}
+                        <span className={`status-badge ${(log.status || (log.eventType === 'TRANSACTION_FRAUDULENT' ? 'FAILED' : 'SUCCESS')) === 'SUCCESS' ? 'completed' : 'failed'}`}>
+                          {log.status || (log.eventType === 'TRANSACTION_FRAUDULENT' ? 'FAILED' : 'SUCCESS')}
                         </span>
                       </td>
                     </tr>
