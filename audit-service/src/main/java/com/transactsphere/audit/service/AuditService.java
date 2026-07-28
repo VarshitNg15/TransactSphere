@@ -25,6 +25,9 @@ public class AuditService {
         
         AuditLog auditLog = AuditLog.builder()
                 .eventType("TRANSACTION_COMPLETED")
+                .action("Transaction Completed")
+                .targetIdentifier("Src: " + event.getSourceAccountId() + ", Tgt: " + event.getTargetAccountId())
+                .status("SUCCESS")
                 .message(String.format("Transaction %s of type %s completed. Source: %s, Target: %s, Amount: %s",
                         event.getTransactionId(), event.getTransactionType(),
                         event.getSourceAccountId(), event.getTargetAccountId(), event.getAmount()))
@@ -41,6 +44,9 @@ public class AuditService {
         
         AuditLog auditLog = AuditLog.builder()
                 .eventType("TRANSACTION_FRAUDULENT")
+                .action("Transaction Fraudulent")
+                .targetIdentifier("Src: " + event.getSourceAccountId() + ", Tgt: " + event.getTargetAccountId())
+                .status("FAILED")
                 .message(String.format("Transaction %s of type %s flagged as fraudulent. Reason: %s. Source: %s, Target: %s, Amount: %s",
                         event.getTransactionId(), event.getTransactionType(), event.getFraudReason(),
                         event.getSourceAccountId(), event.getTargetAccountId(), event.getAmount()))
@@ -55,6 +61,9 @@ public class AuditService {
     public AuditLog logCustomEvent(String eventType, String message, Long userId, String serviceName) {
         AuditLog auditLog = AuditLog.builder()
                 .eventType(eventType)
+                .action(eventType)
+                .targetIdentifier(userId != null ? "User: " + userId : "System")
+                .status("SUCCESS")
                 .message(message)
                 .userId(userId)
                 .timestamp(LocalDateTime.now())

@@ -26,4 +26,7 @@ public class AuditLog {
     private Long userId;
     private LocalDateTime timestamp;
     private String serviceName;
+    private String action;
+    private String targetIdentifier;
+    private String status;
 }
