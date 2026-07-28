@@ -22,9 +22,6 @@ spring:
 
   cloud:
     gateway:
-<<<<<<< HEAD
-
-=======
       globalcors:
         cors-configurations:
           '[/**]':
@@ -42,8 +39,6 @@ spring:
             allowedHeaders: "*"
             allowCredentials: true
             maxAge: 3600
->>>>>>> parent of 1a0f4cb (Fixed CORS issue)
-            
       routes:
         # Auth Service Route
         - id: auth-service
