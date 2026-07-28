@@ -3,6 +3,7 @@ package com.transactsphere.transaction.service;
 import com.transactsphere.transaction.client.AccountClient;
 import com.transactsphere.transaction.client.UserClient;
 import com.transactsphere.transaction.dto.*;
+import com.transactsphere.transaction.exception.FraudulentTransactionException;
 import com.transactsphere.transaction.model.*;
 import com.transactsphere.transaction.repository.TransactionRepository;
 import feign.FeignException;
@@ -41,7 +42,7 @@ public class TransactionService {
     /**
      * Executes a fund transfer from a source to a target account.
      */
-    @Transactional
+    @Transactional(noRollbackFor = FraudulentTransactionException.class)
     public TransactionResponse transfer(Long userId, String roles, TransferRequest request) {
         BigDecimal amount = request.getAmount();
 
@@ -80,7 +81,7 @@ public class TransactionService {
             transaction.setDescription(request.getDescription() + " (Flagged as Fraudulent)");
             transactionRepository.save(transaction);
             publishFraudEvent(transaction, fraudReason);
-            throw new RuntimeException("Transfer blocked due to suspected fraud.");
+            throw new FraudulentTransactionException("Transfer blocked due to suspected fraud.");
         }
 
         // 1. Debit Step
