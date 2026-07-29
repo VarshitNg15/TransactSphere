@@ -6,14 +6,15 @@ TransactSphere is an enterprise-grade, event-driven microservices banking applic
 
 ## 📖 Detailed Summary & Architecture
 
-TransactSphere is architected around the **Database-per-Service** pattern to guarantee strict service boundary isolation. Services are seamlessly deployed using **Kubernetes**, relying on **Kubernetes Native Service Discovery (CoreDNS)** for internal routing and load balancing without hardcoded URLs. They communicate either synchronously via **Spring Cloud OpenFeign** (for immediate consistency operations like debit/credit checks) or asynchronously via **Apache Kafka** (for eventual consistency flows like triggering email/SMS alerts upon transaction completion).
+TransactSphere is architected around the **Database-per-Service** pattern to guarantee strict service boundary isolation. Services are seamlessly deployed using **Kubernetes**, relying on **Kubernetes Native Service Discovery (CoreDNS)** for internal routing and load balancing without hardcoded URLs. All external traffic first hits an **Nginx reverse proxy** that handles SSL/TLS termination before forwarding requests to the Spring Cloud API Gateway. Services communicate either synchronously via **Spring Cloud OpenFeign** (for immediate consistency operations like debit/credit checks) or asynchronously via **Apache Kafka** (for eventual consistency flows like triggering email/SMS alerts upon transaction completion).
 
 ### Key Architectural Concepts
-1. **Kubernetes Service Discovery**: Microservices utilize Kubernetes CoreDNS for native service discovery. The API Gateway and inter-service Feign clients seamlessly route requests directly to Kubernetes service names (e.g., `auth-service:8081`).
-2. **API Gateway Security**: All client traffic flows through the `gateway` module, which validates JWT tokens, resolves client IP addresses to apply granular rate-limits (using Redis), and injects verified edge headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) to downstream services resolved via Kubernetes DNS.
-3. **Database Isolation & Persistent Storage**: The infrastructure initializes isolated PostgreSQL databases for each service instance (e.g., `auth_db`, `user_db`, `account_db`) rather than using a single shared database. Kubernetes **Persistent Volume Claims (PVCs)** ensure stateful data durability across pod crashes or restarts.
-4. **Anti-Stampede Caching Strategy**: The `account-service` employs an advanced caching system utilizing **Probabilistic Early Expiration (XFetch)** and **SingleFlight**. This completely eliminates cache misses for hot keys, ensures zero wait times for end-users during refreshes, and prevents database stampedes.
-5. **Asynchronous Notification Routing**: High-latency notification delivery (Email, SMS) is decoupled from the transaction journey. The `transaction-service` publishes events to Kafka, allowing the `notification-service` to process them asynchronously.
+1. **Nginx Reverse Proxy & SSL Termination**: All external traffic first hits an Nginx pod (`k8s/nginx.yaml`) which listens on ports **80** (HTTP → HTTPS redirect) and **443** (HTTPS). It terminates TLS using auto-generated self-signed certificates and forwards plain HTTP traffic internally to the Spring Cloud Gateway. This keeps TLS handling at the edge and out of application code.
+2. **Kubernetes Service Discovery**: Microservices utilize Kubernetes CoreDNS for native service discovery. The API Gateway and inter-service Feign clients seamlessly route requests directly to Kubernetes service names (e.g., `auth-service:8081`).
+3. **API Gateway Security**: All client traffic flows through the `gateway` module, which validates JWT tokens, resolves client IP addresses to apply granular rate-limits (using Redis), and injects verified edge headers (`X-User-Id`, `X-User-Email`, `X-User-Roles`) to downstream services resolved via Kubernetes DNS.
+4. **Database Isolation & Persistent Storage**: The infrastructure initializes isolated PostgreSQL databases for each service instance (e.g., `auth_db`, `user_db`, `account_db`) rather than using a single shared database. Kubernetes **Persistent Volume Claims (PVCs)** ensure stateful data durability across pod crashes or restarts.
+5. **Anti-Stampede Caching Strategy**: The `account-service` employs an advanced caching system utilizing **Probabilistic Early Expiration (XFetch)** and **SingleFlight**. This completely eliminates cache misses for hot keys, ensures zero wait times for end-users during refreshes, and prevents database stampedes.
+6. **Asynchronous Notification Routing**: High-latency notification delivery (Email, SMS) is decoupled from the transaction journey. The `transaction-service` publishes events to Kafka, allowing the `notification-service` to process them asynchronously.
 
 ---
 
@@ -55,12 +56,15 @@ TransactSphere/
 ├── README.md                         # Project documentation (this file)
 ├── k8s/
 │   ├── infrastructure.yaml           # K8s Deployments/Services/PVCs for Postgres, Redis, Kafka
+│   ├── nginx.yaml                    # K8s Deployment/Service/ConfigMap for Nginx reverse proxy
 │   └── services.yaml                 # K8s Deployments/Services for all backend microservices
 ├── docker/
 │   ├── docker-compose.infra.yml      # Legacy docker infrastructure fallback
+│   ├── nginx/
+│   │   └── nginx.conf                # Nginx configuration (HTTP→HTTPS redirect + TLS proxy)
 │   └── postgres/
 │       └── init-db.sql               # PostgreSQL initial DB creations
-├── gateway/                          # API Gateway (Spring Cloud Gateway) - Port 8080 (Local: 8081)
+├── gateway/                          # API Gateway (Spring Cloud Gateway) - Port 8080
 ├── auth-service/                     # Identity Management & JWT Generation - Port 8081
 ├── user-service/                     # User Profiles & KYC status - Port 8082
 ├── account-service/                  # Accounts & Caching - Port 8083
@@ -80,7 +84,8 @@ TransactSphere/
 
 | Service Name | Port | Database Name | Internal/External Resources Used |
 | :--- | :---: | :--- | :--- |
-| **API Gateway** | `8080` (Local: `8081`) | *None* | Redis (IP-based Request Rate Limiting), K8s DNS |
+| **Nginx Reverse Proxy** | `80` / `443` | *None* | SSL/TLS termination, HTTP→HTTPS redirect, forwards to Gateway |
+| **API Gateway** | `8080` | *None* | Redis (IP-based Request Rate Limiting), K8s DNS |
 | **Auth Service** | `8081` | `auth_db` | PostgreSQL, Redis (JWT Blacklisting), K8s DNS |
 | **User Service** | `8082` | `user_db` | PostgreSQL, Kafka, K8s DNS |
 | **Account Service** | `8083` | `account_db` | PostgreSQL, Redis (Balance Caching), Kafka, K8s DNS |
@@ -91,7 +96,7 @@ TransactSphere/
 | **Audit Service** | `8088` | `audit_db` | PostgreSQL, Kafka (Consumer), K8s DNS |
 | **Statement Service** | `8089` | `statement_db` | PostgreSQL, OpenFeign, K8s DNS |
 | **Admin Service** | `8090` | *None* | OpenFeign, K8s DNS |
-| **React Frontend** | `5173` | *None (Local Storage)*| Browser Client connecting to Gateway |
+| **React Frontend** | `5173` | *None (Local Storage)*| Browser Client connecting to Nginx |
 | **PostgreSQL** | `5432` | *N/A (Multi-DB)* | Stores data for all backend services |
 | **Redis Cache** | `6379` | *N/A* | In-memory cache & session store |
 | **Kafka Broker** | `9092` / `29092` | *N/A* | Asynchronous communication pipeline (KRaft) |
@@ -100,7 +105,13 @@ TransactSphere/
 
 ## 🛡️ Core Features
 
-### 1. Kubernetes Native Service Discovery
+### 1. Nginx Reverse Proxy & SSL/TLS Termination
+- A dedicated **Nginx pod** (`k8s/nginx.yaml`) sits at the network edge, the single public-facing entrypoint for all external traffic.
+- Listens on **port 80** and immediately issues a **301 redirect to HTTPS** for all connections.
+- Listens on **port 443 (HTTPS)**, terminating TLS using auto-generated self-signed certificates (generated via OpenSSL at container startup). All traffic is then forwarded as plain HTTP to the internal API Gateway, keeping TLS logic out of application code.
+- The Nginx `ConfigMap` and certificate volume are declared in `k8s/nginx.yaml`; the local equivalent config lives at `docker/nginx/nginx.conf`.
+
+### 2. Kubernetes Native Service Discovery
 - Seamless internal routing leveraging Kubernetes CoreDNS.
 - API Gateway directly routes to internal Kubernetes service names.
 - Internal communication via `@FeignClient` resolves seamlessly using K8s service names, removing the need for an external registry (Eureka).
@@ -170,7 +181,10 @@ You can deploy the entire infrastructure and microservices ecosystem to your Kub
 # 1. Start persistent infrastructure (Postgres, Redis, Kafka)
 kubectl apply -f k8s/infrastructure.yaml
 
-# 2. Deploy all microservices
+# 2. Deploy the Nginx reverse proxy (SSL termination)
+kubectl apply -f k8s/nginx.yaml
+
+# 3. Deploy all microservices
 kubectl apply -f k8s/services.yaml
 ```
 This will create deployments, services, and persistent volumes for:
@@ -180,11 +194,15 @@ This will create deployments, services, and persistent volumes for:
 - API Gateway (`8080`)
 - Auth, User, Account, Transaction, Notification, Fraud, Analytics, Audit, Statement, and Admin Services
 
-### Step 3: Expose the API Gateway
-If you are running Minikube, you can port-forward the API gateway to access it locally:
+### Step 3: Expose Nginx
+If you are running Minikube, expose the Nginx service to access the platform locally over HTTPS:
 ```bash
-kubectl port-forward svc/gateway 8081:8080
+# Port-forward Nginx (HTTPS on 443, HTTP on 80)
+kubectl port-forward svc/nginx-service 443:443 80:80
 ```
+The platform is then reachable at `https://localhost`. Your browser will warn about the self-signed certificate — this is expected for local development. Accept the exception to proceed.
+
+> **Alternative (Minikube LoadBalancer tunnel):** Run `minikube tunnel` in a separate terminal so the `nginx-service` of type `LoadBalancer` gets a real local IP assigned automatically.
 
 ### Step 4: Start the Frontend Application
 ```bash
@@ -288,7 +306,8 @@ Invoke-RestMethod -Uri "http://localhost:8081/api/v1/transactions/deposit" `
 
 ### 6. Verify Events & Notification Delivery
 - **Email**: Check your configured SMTP email inbox to verify the transaction email alerts.
-- **Kubernetes Pods**: Run `kubectl get pods` to see all running microservice instances.
+- **Kubernetes Pods**: Run `kubectl get pods` to see all running microservice instances, including the `nginx-proxy` pod.
+- **Nginx Logs**: Inspect access/error logs with `kubectl logs -l app=nginx-proxy`.
 - **SMS Logs**: Check the console log of the running `notification-service` (`kubectl logs -l app=notification-service`) to inspect mock SMS prints.
 - **In-App Notifications**:
   ```powershell
